@@ -1,0 +1,3 @@
+name=Companion Club
+launch=index.html
+server=server.js

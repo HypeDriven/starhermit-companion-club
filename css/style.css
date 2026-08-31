@@ -1,0 +1,3 @@
+/* Companion Club — base styles. */
+html, body { margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #1a1210; color: #f3e6d8; min-height: 100vh; }

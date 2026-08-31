@@ -1,0 +1,104 @@
+[
+  {
+    "name": "ui-tick",
+    "seconds": 1,
+    "prompt": "A soft, dry fingertip tap on a small wooden button, very short and gentle.",
+    "event": "ui"
+  },
+  {
+    "name": "select-chime",
+    "seconds": 1,
+    "prompt": "A gentle two-note wooden xylophone chime, warm and affirmative.",
+    "event": "select"
+  },
+  {
+    "name": "deselect-thunk",
+    "seconds": 1,
+    "prompt": "A single soft, low wooden thunk, like setting a small cup down on a table.",
+    "event": "deselect"
+  },
+  {
+    "name": "step-knock",
+    "seconds": 1,
+    "prompt": "A light, soft knock on a wooden tabletop, short and muted.",
+    "event": "step"
+  },
+  {
+    "name": "serve-tray",
+    "seconds": 1,
+    "prompt": "A ceramic cup placed gently on a wooden tray with a soft clink.",
+    "event": "serve"
+  },
+  {
+    "name": "together-bells",
+    "seconds": 1,
+    "prompt": "Two small hand bells rung together in quick succession, bright and cheerful.",
+    "event": "together"
+  },
+  {
+    "name": "tidy-swipe",
+    "seconds": 1,
+    "prompt": "A soft cloth wiping across a wooden counter with a quick swish and a small tap at the end.",
+    "event": "tidy"
+  },
+  {
+    "name": "wish-new-plink",
+    "seconds": 1,
+    "prompt": "A single delicate glass plink, like a drop landing in a quiet room.",
+    "event": "wish-new"
+  },
+  {
+    "name": "miss-sigh",
+    "seconds": 2,
+    "prompt": "A soft, low descending slide whistle fading out gently, like a balloon slowly deflating.",
+    "event": "miss"
+  },
+  {
+    "name": "invalid-knocks",
+    "seconds": 1,
+    "prompt": "Two quick, muted thumps on a hollow wooden box, like a closed door being tapped twice.",
+    "event": "invalid"
+  },
+  {
+    "name": "round-bell",
+    "seconds": 1,
+    "prompt": "A small brass service bell rung once, clear and warm.",
+    "event": "round"
+  },
+  {
+    "name": "win-fanfare",
+    "seconds": 3,
+    "prompt": "A cheerful small hand-bell jingle followed by a bright rising cascade of chimes.",
+    "event": "win"
+  },
+  {
+    "name": "lose-fade",
+    "seconds": 2,
+    "prompt": "A slow, soft downward chime fading into silence, like a music box winding down.",
+    "event": "lose"
+  },
+  {
+    "name": "undo-rewind",
+    "seconds": 1,
+    "prompt": "A quick, soft reverse swish, like a sheet of paper being slid back across a desk.",
+    "event": "undo"
+  },
+  {
+    "name": "hint-sparkle",
+    "seconds": 1,
+    "prompt": "Two small bright glass sparkles, like tiny wind chimes touched lightly.",
+    "event": "hint"
+  },
+  {
+    "name": "purchase-coin",
+    "seconds": 1,
+    "prompt": "A small coin dropped into a wooden cashbox with a soft clack.",
+    "event": "purchase"
+  },
+  {
+    "name": "star-twinkle",
+    "seconds": 1,
+    "prompt": "A single high, delicate twinkle, like a tiny silver bell.",
+    "event": "star"
+  }
+]
