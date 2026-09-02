@@ -13,14 +13,22 @@ function readIndex() {
 }
 
 const server = http.createServer((req, res) => {
-  const url = req.url || '/';
-  if (url === '/' || url.startsWith('/index')) {
+  // strip query string / fragment and normalize to a safe path under ROOT
+  let url;
+  try { url = decodeURIComponent(new URL(req.url || '/', 'http://localhost').pathname); }
+  catch (e) { url = '/'; }
+  if (url === '/' || url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(readIndex());
     return;
   }
   // static files under the project root
-  const p = path.join(ROOT, url);
+  const p = path.normalize(path.join(ROOT, url));
+  if (!p.startsWith(ROOT + path.sep)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('forbidden');
+    return;
+  }
   fs.readFile(p, (err, data) => {
     if (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
