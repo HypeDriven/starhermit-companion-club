@@ -484,7 +484,7 @@
     }
 
     s.rngState = rng.state;
-    if (s.terminal) finalizeScore(s);
+    finalizeScore(s); // keep the HUD total live during play, not only at terminal
     return { ok: true, state: s, events: s.events };
   }
 

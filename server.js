@@ -1,11 +1,10 @@
 /* Companion Club — authoritative server (Node). */
-'use strict';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-
-const ROOT = __dirname;
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8000;
 
 function readIndex() {
@@ -40,6 +39,10 @@ const server = http.createServer((req, res) => {
     if (ext === '.html') type = 'text/html';
     else if (ext === '.js') type = 'text/javascript';
     else if (ext === '.css') type = 'text/css';
+    else if (ext === '.json') type = 'application/json';
+    else if (ext === '.svg') type = 'image/svg+xml';
+    else if (ext === '.png') type = 'image/png';
+    else if (ext === '.ico') type = 'image/x-icon';
     else if (ext === '.opus') type = 'audio/ogg';
     res.writeHead(200, { 'Content-Type': type });
     res.end(data);
@@ -50,4 +53,4 @@ server.listen(PORT, () => {
   console.log('Companion Club server listening on port ' + PORT);
 });
 
-module.exports = server;
+export default server;

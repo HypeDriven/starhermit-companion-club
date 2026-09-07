@@ -1,6 +1,6 @@
-/* Companion Club — procedural WebAudio: original short transients per
- * logical event, soft wooden knocks, quiet clubhouse ambience, adaptive
- * music pad. No audio assets; everything is synthesized.
+/* Companion Club — WebAudio: authored sfx/<name>.opus samples per logical
+ * event (see sfx/manifest.json) with procedural synthesized fallbacks, soft
+ * wooden knocks, quiet clubhouse ambience, adaptive music pad.
  * Browser global: CCAudio.
  */
 (function (root) {
@@ -163,9 +163,13 @@
     'star':      function () { blip(1568, 0.18, 'sine', 0.1); }
   };
 
+  // Rules events whose names differ from the authored sound events.
+  var EVENT_ALIAS = { 'move': 'step', 'wish-expired': 'miss' };
+
   function play(name) {
     if (!started || !ctx || settings.muted) return;
     if (ctx.state === 'suspended') ctx.resume();
+    if (EVENT_ALIAS[name]) name = EVENT_ALIAS[name];
     var clip = sampleForEvent[name];
     if (clip) {
       if (sampleBuffers[clip]) { playSample(sampleBuffers[clip]); return; }
