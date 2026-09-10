@@ -21,3 +21,8 @@ Generated with MOSS-SoundEffect v2.0, 48 kHz mono Opus (96 kbps VBR, loudness-no
 | hint-sparkle.opus | hint | Two small bright glass sparkles, like tiny wind chimes touched lightly. |
 | purchase-coin.opus | purchase | A small coin dropped into a wooden cashbox with a soft clack. |
 | star-twinkle.opus | star | A single high, delicate twinkle, like a tiny silver bell. |
+| messy-clatter.opus | messy | A small ceramic plate and a teaspoon set down carelessly on a wooden counter with a light clatter and a few crumbs scattering, short and close. |
+| patience-tick.opus | patience-low | Two quick, nervous ticks of a small wooden mantel clock, dry and close, no ring. |
+| streak-chime.opus | streak | Three ascending bright wooden xylophone notes played quickly in a row, playful and rewarding, with a short warm ring. |
+| day-late-block.opus | day-late | A single soft, low wooden temple block strike with a gentle hollow ring, calm but urgent. |
+| ambience-clubhouse.opus | ambience | Quiet cozy indoor room tone of a small wooden clubhouse at evening: a soft fireplace crackling gently in the background, a faint wall clock ticking, an occasional muffled creak of wooden floorboards, no voices, no music, steady and calm. |

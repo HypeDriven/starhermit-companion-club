@@ -34,7 +34,7 @@ const MIME = {
   '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
   '.png': 'image/png', '.ico': 'image/x-icon', '.wav': 'audio/wav', '.mp3': 'audio/mpeg',
   '.ogg': 'audio/ogg', '.opus': 'audio/ogg', '.glb': 'model/gltf-binary',
-  '.woff2': 'font/woff2', '.ts': 'text/plain',
+  '.woff2': 'font/woff2', '.ts': 'text/plain', '.webp': 'image/webp',
 };
 
 const server = http.createServer(async (req, res) => {
@@ -50,7 +50,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(404).end('not found');
   }
 });
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+await new Promise((resolve) => server.listen(process.env.PORT ? parseInt(process.env.PORT, 10) : 0, '127.0.0.1', resolve));
 const BASE = `http://127.0.0.1:${server.address().port}`;
 
 const browser = await chromium.launch({

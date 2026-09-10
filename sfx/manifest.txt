@@ -1,0 +1,28 @@
+# Companion Club — SFX manifest (canonical). One clip per line:
+# file | event id (CCAudio.play name, js/audio.js SFX map) | description of the sound | usage context
+# Clips: MOSS-SoundEffect v2.0, 48 kHz mono Opus 96 kbps VBR, loudness-normalised (-20 LUFS), 100 steps.
+# js/audio.js fetches sfx/manifest.json after the first user gesture and lazily loads each clip on its first
+# trigger; until a clip is decoded (or if it fails) the synthesized fallback for the same event plays instead.
+# Rules event aliases: move -> step, wish-expired -> miss (EVENT_ALIAS in audio.js). Buses: effects (all one-shots), ambience (loop), music (synth pad).
+ui-tick.opus | ui | A soft, dry fingertip tap on a small wooden button, very short and gentle | Play button pressed on the title screen (main.js start) right after the audio context unlocks
+select-chime.opus | select | A gentle two-note wooden xylophone chime, warm and affirmative | A companion is selected from the Friends list or by tapping its board cell (main.js choose)
+deselect-thunk.opus | deselect | A single soft, low wooden thunk, like setting a small cup down on a table | Reserved: selection cleared; no UI path deselects today, synth fallback only
+step-knock.opus | step | A light, soft knock on a wooden tabletop, short and muted | Every accepted move (rules event 'move' via alias): arrow keys or the on-screen pad
+serve-tray.opus | serve | A ceramic cup placed gently on a wooden tray with a soft clink | A wish is served at its matching station (rules event 'serve')
+together-bells.opus | together | Two small hand bells rung together in quick succession, bright and cheerful | Layered over serve when at least one other companion stands adjacent (serve event together > 0)
+tidy-swipe.opus | tidy | A soft cloth wiping across a wooden counter with a quick swish and a small tap at the end | A messy station is tidied (rules event 'tidy'), Tidy button or T key
+wish-new-plink.opus | wish-new | A single delicate glass plink, like a drop landing in a quiet room | A companion receives a new wish after cooldown or after an expiry (rules event 'wish-new')
+miss-sigh.opus | miss | A soft, low descending slide whistle fading out gently, like a balloon slowly deflating | A wish's patience reaches zero (rules event 'wish-expired' via alias)
+invalid-knocks.opus | invalid | Two quick, muted thumps on a hollow wooden box, like a closed door being tapped twice | Any rejected command (blocked cell, wrong station, messy station, no wish...) with the reason shown in the status line
+round-bell.opus | round | A small brass service bell rung once, clear and warm | Endless ruleset: a wave goal is met and the next wave begins (rules event 'round'); no UI path starts the endless ruleset today
+win-fanfare.opus | win | A cheerful small hand-bell jingle followed by a bright rising cascade of chimes | Club day goal met (rules event 'win'), plays as the results overlay opens
+lose-fade.opus | lose | A slow, soft downward chime fading into silence, like a music box winding down | Day ended, harmony lost, no actions or resign (rules event 'lose'), plays as the results overlay opens
+undo-rewind.opus | undo | A quick, soft reverse swish, like a sheet of paper being slid back across a desk | Reserved: undo of the last turn; not exposed by the UI today, synth fallback only
+hint-sparkle.opus | hint | Two small bright glass sparkles, like tiny wind chimes touched lightly | Hint button or H key produces a suggested action (main.js hint)
+purchase-coin.opus | purchase | A small coin dropped into a wooden cashbox with a soft clack | Reserved: decor purchase in the clubhouse hub; the hub is not exposed by the UI today
+star-twinkle.opus | star | A single high, delicate twinkle, like a tiny silver bell | Reserved: journey star awarded on the results screen; stars are not exposed by the UI today
+messy-clatter.opus | messy | A small ceramic plate and a teaspoon set down carelessly on a wooden counter with a light clatter and a few crumbs scattering | The served station becomes messy (rules event 'messy', fires right after every serve)
+patience-tick.opus | patience-low | Two quick, nervous ticks of a small wooden mantel clock, dry and close, no ring | End of any turn on which some companion's wish has exactly 2 patience left (main.js command)
+streak-chime.opus | streak | Three ascending bright wooden xylophone notes played quickly in a row, playful and rewarding | Layered over serve when the serve streak reaches 3 or more (serve event streak >= 3)
+day-late-block.opus | day-late | A single soft, low wooden temple block strike with a gentle hollow ring, calm but urgent | End of the turn that leaves exactly 5 turns in the day (main.js command)
+ambience-clubhouse.opus | ambience | Quiet cozy clubhouse room tone: soft fireplace crackle, faint wall clock, an occasional floorboard creak, no voices or music | 12 s loop on the ambience bus from the Play press until the tab is hidden; replaces the synthesized noise bed once decoded

@@ -40,6 +40,7 @@
           sampleForEvent[entry.event] = entry.name;
         }
       });
+      if (sampleForEvent.ambience) loadAmbienceLoop(sampleForEvent.ambience);
     }).catch(function () { /* no samples available; synthesis fallback stays */ });
   }
 
@@ -58,6 +59,23 @@
       delete samplePending[name];
       sampleFailed[name] = true;
     });
+  }
+
+  // Authored room-tone loop replaces the synthesized noise bed when it decodes;
+  // any failure leaves the synthesized ambience running.
+  function loadAmbienceLoop(name) {
+    if (!ctx || sampleFailed[name]) return;
+    fetch(SAMPLE_BASE + name + '.opus').then(function (res) {
+      if (!res.ok) throw new Error('ambience ' + res.status);
+      return res.arrayBuffer();
+    }).then(function (bytes) { return ctx.decodeAudioData(bytes); }).then(function (buffer) {
+      if (!started || !ambienceNodes) return;
+      var src = ctx.createBufferSource(); src.buffer = buffer; src.loop = true;
+      var g = ctx.createGain(); g.gain.value = 0.5;
+      src.connect(g); g.connect(buses.ambience); src.start();
+      try { ambienceNodes.src.stop(); } catch (e) { /* already stopped */ }
+      ambienceNodes = { src: src, gain: g, authored: true };
+    }).catch(function () { sampleFailed[name] = true; });
   }
 
   function playSample(buffer) {
@@ -160,7 +178,12 @@
     'undo':      function () { blip(500, 0.08, 'triangle', 0.1, 'effects', ctx.currentTime, 380); caption('undo'); },
     'hint':      function () { blip(990, 0.12, 'sine', 0.1); blip(1320, 0.14, 'sine', 0.07, 'effects', ctx.currentTime + 0.07); caption('hint'); },
     'purchase':  function () { blip(784, 0.14, 'triangle', 0.12); blip(1046, 0.2, 'triangle', 0.1, 'effects', ctx.currentTime + 0.08); knock(0.05, 0.15, 2400); caption('decor placed'); },
-    'star':      function () { blip(1568, 0.18, 'sine', 0.1); }
+    'star':      function () { blip(1568, 0.18, 'sine', 0.1); },
+    'messy':     function () { knock(0.07, 0.16, 3200, ctx.currentTime + 0.12); knock(0.04, 0.1, 2600, ctx.currentTime + 0.2); },
+    'patience-low': function () { blip(720, 0.04, 'square', 0.05); blip(720, 0.04, 'square', 0.05, 'effects', ctx.currentTime + 0.12); caption('a wish is about to expire'); },
+    'streak':    function () { [0, 4, 9].forEach(function (st, i) { blip(variant(880 * Math.pow(2, st / 12)), 0.12, 'triangle', 0.09, 'effects', ctx.currentTime + i * 0.07); }); caption('streak'); },
+    'day-late':  function () { blip(392, 0.3, 'sine', 0.12, 'effects', ctx.currentTime, 330); caption('five turns left'); },
+    'ambience':  function () { /* looped room tone; handled by startAmbience, never one-shot */ }
   };
 
   // Rules events whose names differ from the authored sound events.

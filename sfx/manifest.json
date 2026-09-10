@@ -100,5 +100,35 @@
     "seconds": 1,
     "prompt": "A single high, delicate twinkle, like a tiny silver bell.",
     "event": "star"
+  },
+  {
+    "name": "messy-clatter",
+    "seconds": 1,
+    "prompt": "A small ceramic plate and a teaspoon set down carelessly on a wooden counter with a light clatter and a few crumbs scattering, short and close.",
+    "event": "messy"
+  },
+  {
+    "name": "patience-tick",
+    "seconds": 1,
+    "prompt": "Two quick, nervous ticks of a small wooden mantel clock, dry and close, no ring.",
+    "event": "patience-low"
+  },
+  {
+    "name": "streak-chime",
+    "seconds": 2,
+    "prompt": "Three ascending bright wooden xylophone notes played quickly in a row, playful and rewarding, with a short warm ring.",
+    "event": "streak"
+  },
+  {
+    "name": "day-late-block",
+    "seconds": 1,
+    "prompt": "A single soft, low wooden temple block strike with a gentle hollow ring, calm but urgent.",
+    "event": "day-late"
+  },
+  {
+    "name": "ambience-clubhouse",
+    "seconds": 12,
+    "prompt": "Quiet cozy indoor room tone of a small wooden clubhouse at evening: a soft fireplace crackling gently in the background, a faint wall clock ticking, an occasional muffled creak of wooden floorboards, no voices, no music, steady and calm.",
+    "event": "ambience"
   }
 ]

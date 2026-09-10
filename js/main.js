@@ -6,11 +6,11 @@ var state = null, selected = null, startedAt = 0, message = '';
 var root = document.getElementById('cc-root');
 
 function title() {
-  root.innerHTML = '<main class="cc-title"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p><button id="cc-play" type="button">Play</button></section></main>';
+  root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p><button id="cc-play" type="button">Play</button></section></main>';
   document.getElementById('cc-play').addEventListener('click', start);
 }
 function start() {
-  if (Audio) Audio.start();
+  if (Audio) { Audio.start(); Audio.play('ui'); }
   state = Rules.createGame(Content.JOURNEY[0]); selected = state.companions[0]?.id || null; startedAt = performance.now();
   message = state.cfg.intro || 'Choose a friend and guide them toward the station matching their wish.'; render();
 }
@@ -23,7 +23,17 @@ function command(cmd) {
   if (!out.ok) { message = String(out.reason || 'That action is unavailable.').replace(/-/g, ' '); Audio && Audio.play && Audio.play('invalid'); render(); return; }
   state = out.state;
   message = out.events.length ? out.events.map(function (e) { return e.type.replace(/-/g, ' '); }).join(' · ') : 'Turn complete';
-  if (Audio && Audio.play) out.events.forEach(function (e) { Audio.play(e.type); });
+  if (Audio && Audio.play) {
+    out.events.forEach(function (e) {
+      Audio.play(e.type);
+      if (e.type === 'serve' && e.together > 0) Audio.play('together');
+      if (e.type === 'serve' && e.streak >= 3) Audio.play('streak');
+    });
+    if (!state.terminal) {
+      if (state.companions.some(function (c) { return c.wish && c.wish.patience === 2; })) Audio.play('patience-low');
+      if (state.cfg.dayLength && state.cfg.dayLength - state.tick === 5) Audio.play('day-late');
+    }
+  }
   render();
 }
 function choose(id) { selected = id; message = companionName(id) + ' selected.'; Audio && Audio.play && Audio.play('select'); render(); }
@@ -37,7 +47,7 @@ function tidy() {
 function hint() {
   var h = Rules.hint(state);
   if (!h) { message = 'No legal action is available.'; render(); return; }
-  var a = h.action; message = 'Hint: ' + a.type + (a.dir ? ' ' + a.dir : '') + ' with ' + companionName(a.companion) + '.'; selected = a.companion; render();
+  var a = h.action; message = 'Hint: ' + a.type + (a.dir ? ' ' + a.dir : '') + ' with ' + companionName(a.companion) + '.'; selected = a.companion; Audio && Audio.play && Audio.play('hint'); render();
 }
 function renderBoard() {
   var html = '';
@@ -69,7 +79,7 @@ function resultHtml() {
     ['Day bonus', s.dayBonus], ['Mood bonus', s.moodBonus]
   ].filter(function (p) { return p[1]; });
   var rows = parts.map(function (p) { return '<tr><td>'+p[0]+'</td><td>'+p[1]+'</td></tr>'; }).join('');
-  return '<section class="cc-result" role="dialog" aria-modal="true" aria-labelledby="cc-result-title"><div class="cc-result-card"><h2 id="cc-result-title">'+(t.won?'Club day complete!':'Club day ended')+'</h2><p>'+why+'</p><table class="cc-score"><tbody>'+rows+'<tr class="cc-score-total"><td>Total</td><td>'+s.total+'</td></tr></tbody></table><button id="cc-again">Play again</button></div></section>';
+  return '<section class="cc-result" role="dialog" aria-modal="true" aria-labelledby="cc-result-title"><div class="cc-result-card"><img class="cc-result-art" src="./assets/results-art.webp" alt="" onerror="this.remove()"><h2 id="cc-result-title">'+(t.won?'Club day complete!':'Club day ended')+'</h2><p>'+why+'</p><table class="cc-score"><tbody>'+rows+'<tr class="cc-score-total"><td>Total</td><td>'+s.total+'</td></tr></tbody></table><button id="cc-again">Play again</button></div></section>';
 }
 function render() {
   var active = document.activeElement;

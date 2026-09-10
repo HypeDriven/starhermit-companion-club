@@ -23,7 +23,9 @@ const server = http.createServer((req, res) => {
   }
   // static files under the project root
   const p = path.normalize(path.join(ROOT, url));
-  if (!p.startsWith(ROOT + path.sep)) {
+  var rel = path.relative(ROOT, p).split(path.sep);
+  if (!p.startsWith(ROOT + path.sep) || rel[0] === 'tests' || rel[0] === 'tools' ||
+      rel[0] === 'node_modules' || rel.some(function (seg) { return seg.charAt(0) === '.'; })) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('forbidden');
     return;
@@ -44,6 +46,8 @@ const server = http.createServer((req, res) => {
     else if (ext === '.png') type = 'image/png';
     else if (ext === '.ico') type = 'image/x-icon';
     else if (ext === '.opus') type = 'audio/ogg';
+    else if (ext === '.webp') type = 'image/webp';
+    else if (ext === '.txt' || ext === '.md') type = 'text/plain; charset=utf-8';
     res.writeHead(200, { 'Content-Type': type });
     res.end(data);
   });
