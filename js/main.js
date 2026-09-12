@@ -2,16 +2,50 @@
 (function () {
 'use strict';
 var Rules = window.CCRules, Content = window.CCContent, Audio = window.CCAudio;
+var Store = window.CCStore, Platform = window.CCPlatform;
+var doc = Store.load();                 // persisted save document (offline cache)
 var state = null, selected = null, startedAt = 0, message = '';
+var roundStreak = 0, roundRecorded = false;
 var root = document.getElementById('cc-root');
 
+// ---- platform handshake: token, cloud save (remote wins), account line ----
+try { Platform.init(); } catch (e) { /* offline */ }
+if (Platform.hosted) {
+  try { Platform.fetchProfile().then(renderAccountLine).catch(function () {}); } catch (e) { /* ok */ }
+  try { Platform.onSync(renderAccountLine); } catch (e) { /* ok */ }
+  Platform.loadCloud().then(function (remoteRaw) {
+    var remote = remoteRaw ? Store.loadRaw(remoteRaw) : null;
+    if (remote) Store.save(remote); // local cache mirrors the remote doc
+    renderAccountLine();
+  }).catch(function () {});
+}
+
+function accountLine() {
+  return '<p class="cc-account" id="cc-account" aria-live="polite"></p>';
+}
+function renderAccountLine() {
+  var el = document.getElementById('cc-account');
+  if (!el) return;
+  if (!Platform.hosted) {
+    el.textContent = 'Offline — progress is stored on this device.';
+    return;
+  }
+  var name = Platform.profile ? Platform.profile.name : '…';
+  var syncTxt = Platform.sync === 'synced' ? 'progress synced'
+    : Platform.sync === 'saving' ? 'saving…'
+    : 'cloud sync unavailable';
+  el.textContent = 'Playing as ' + name + ' · ' + syncTxt;
+}
+
 function title() {
-  root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p><button id="cc-play" type="button">Play</button></section></main>';
+  root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p>' + accountLine() + '<button id="cc-play" type="button">Play</button></section></main>';
+  renderAccountLine();
   document.getElementById('cc-play').addEventListener('click', start);
 }
 function start() {
   if (Audio) { Audio.start(); Audio.play('ui'); }
   state = Rules.createGame(Content.JOURNEY[0]); selected = state.companions[0]?.id || null; startedAt = performance.now();
+  roundStreak = 0; roundRecorded = false;
   message = state.cfg.intro || 'Choose a friend and guide them toward the station matching their wish.'; render();
 }
 function companion(id) { return state.companions.find(function (c) { return c.id === id; }); }
@@ -34,7 +68,39 @@ function command(cmd) {
       if (state.cfg.dayLength && state.cfg.dayLength - state.tick === 5) Audio.play('day-late');
     }
   }
+  out.events.forEach(function (e) { if (e.type === 'serve' && e.streak > roundStreak) roundStreak = e.streak; });
+  if (state.terminal && !roundRecorded) { roundRecorded = true; recordRound(); }
   render();
+}
+
+// Persist the finished round and unlock the achievements the game can
+// compute from it (the rest unlock as their modes ship). The save goes
+// through CCStore.save → localStorage + the platform cloud slot.
+function recordRound() {
+  var p = doc.progress, st = doc.progress.stats;
+  st.rounds++;
+  if (state.terminal.won) st.wins++;
+  st.serves += state.fulfilled || 0;
+  if (roundStreak > st.bestStreak) st.bestStreak = roundStreak;
+  st.playMs += Math.round(performance.now() - startedAt);
+  p.sparkle += state.score.total || 0;
+  p.sparkleEarned += state.score.total || 0;
+
+  var unlocked = [];
+  function grant(key) {
+    if (!p.achievements[key]) {
+      p.achievements[key] = Date.now();
+      var def = Content.ACHIEVEMENTS.find(function (a) { return a.key === key; });
+      if (def) unlocked.push(def.name);
+    }
+  }
+  if (st.serves > 0) grant('first-serve');
+  if (st.wins > 0) grant('first-win');
+  if (st.bestStreak >= 5) grant('streak-5');
+  if (st.serves >= 100) grant('serves-100');
+  if (p.sparkleEarned >= 5000) grant('sparkle-5000');
+  Store.save(doc);
+  if (unlocked.length) message = 'Achievement unlocked: ' + unlocked.join(', ');
 }
 function choose(id) { selected = id; message = companionName(id) + ' selected.'; Audio && Audio.play && Audio.play('select'); render(); }
 function move(dir) { if (selected) command({ type: 'move', companion: selected, dir: dir }); }
