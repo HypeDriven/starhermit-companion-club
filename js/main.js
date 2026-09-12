@@ -122,8 +122,11 @@ function renderBoard() {
     var s=state.stations.find(function (p) { return p.x===x&&p.y===y; });
     var blocked=state.grid[y][x]==='#';
     var text=c ? (Content.COMPANIONS[c.id]?.icon || '●') : s ? (Content.ACTIVITIES[s.activity]?.icon || '◆') : blocked ? '▦' : '·';
-    var label=c ? companionName(c.id) : s ? activityName(s.activity)+(s.messy?', messy':'') : blocked?'Wall':'Open floor';
-    html += '<button type="button" class="cc-cell '+(c?'friend ':'')+(s?'station ':'')+(blocked?'blocked ':'')+(c&&c.id===selected?'selected':'')+'" '+(c?'data-friend="'+c.id+'"':'disabled')+' aria-label="Row '+(y+1)+', column '+(x+1)+': '+label+'"><b aria-hidden="true">'+text+'</b><span>'+label+'</span></button>';
+    // A station keeps its identity (and messy badge) while a companion stands on it.
+    var stationLabel = s ? activityName(s.activity)+(s.messy?', messy':'') : '';
+    var label=c ? companionName(c.id)+(s?' at '+stationLabel:'') : s ? stationLabel : blocked?'Wall':'Open floor';
+    var badge = s && c ? '<i class="cc-station-badge'+(s.messy?' messy':'')+'" aria-hidden="true">'+(Content.ACTIVITIES[s.activity]?.icon || '◆')+(s.messy?'!':'')+'</i>' : '';
+    html += '<button type="button" class="cc-cell '+(c?'friend ':'')+(s?'station ':'')+(s&&s.messy?'messy ':'')+(blocked?'blocked ':'')+(c&&c.id===selected?'selected':'')+'" '+(c?'data-friend="'+c.id+'"':'disabled')+' aria-label="Row '+(y+1)+', column '+(x+1)+': '+label+'">'+badge+'<b aria-hidden="true">'+text+'</b><span>'+label+'</span></button>';
   }
   return html;
 }
@@ -155,7 +158,7 @@ function render() {
       : active.dataset && active.dataset.dir ? '[data-dir="' + active.dataset.dir + '"]'
       : null)
     : null;
-  root.innerHTML = '<main class="cc-game"><header><div><h1>Companion Club</h1><p>Clubhouse Day 1</p></div><div>Served <b>'+state.fulfilled+'/'+state.cfg.goal+'</b> · Turns <b>'+state.tick+'</b> · Score <b>'+state.score.total+'</b></div></header><section class="cc-layout"><aside><h2>Friends</h2><div class="cc-friends">'+renderFriends()+'</div><p class="cc-message" role="status">'+message+'</p><div class="cc-pad"><button data-dir="up">↑</button><button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button></div><div class="cc-actions"><button id="cc-serve">Serve wish</button><button id="cc-tidy">Tidy</button><button id="cc-hint">Hint</button></div></aside><section class="cc-board-wrap"><h2>Clubhouse floor</h2><div class="cc-board" style="--cols:'+state.cfg.board.cols+'">'+renderBoard()+'</div></section></section>'+(state.terminal?resultHtml():'')+'</main>';
+  root.innerHTML = '<main class="cc-game"><header><div><h1>Companion Club</h1><p>Clubhouse Day 1</p></div><div>Served <b>'+state.fulfilled+'/'+state.cfg.goal+'</b> · Turns <b>'+state.tick+'</b> · Score <b>'+state.score.total+'</b></div></header><section class="cc-layout"><aside><h2>Friends</h2><div class="cc-friends">'+renderFriends()+'</div><p class="cc-message" role="status">'+message+'</p><div class="cc-pad"><button data-dir="up">↑</button><button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button></div><div class="cc-actions"><button id="cc-serve">Serve wish</button><button id="cc-tidy">Tidy</button><button id="cc-hint">Hint</button></div></aside><section class="cc-board-wrap"><h2>Clubhouse floor</h2><div class="cc-board" style="--cols:'+state.cfg.board.cols+';--rows:'+state.cfg.board.rows+'">'+renderBoard()+'</div></section></section>'+(state.terminal?resultHtml():'')+'</main>';
   root.querySelectorAll('[data-friend]').forEach(function (b) { b.addEventListener('click', function () { choose(b.dataset.friend); }); });
   root.querySelectorAll('[data-dir]').forEach(function (b) { b.addEventListener('click', function () { move(b.dataset.dir); }); });
   document.getElementById('cc-serve').addEventListener('click', serve); document.getElementById('cc-tidy').addEventListener('click', tidy); document.getElementById('cc-hint').addEventListener('click', hint);
