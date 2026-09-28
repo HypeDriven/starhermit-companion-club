@@ -13,9 +13,11 @@
  * the real UI; the mirror only decides which visible control to press next
  * and detects the terminal state.
  *
- * Known limitation: this build's UI has no pause/resume or settings screens
- * (js/main.js implements title → play → result only), so those are not
- * covered. The repo's server.js is a plain static file server; this test
+ * Graphics settings: opened through the visible Settings button, the Quality
+ * preset and one per-effect override are changed and checked on the
+ * data-gfx-* attributes and the summary line, then again after a reload. The
+ * desktop playthrough then runs on Ultra (all effects), the mobile one on
+ * Auto (Low under the software GPU). The repo's server.js is a plain static file server; this test
  * embeds its own equivalent server on an ephemeral port to stay
  * self-contained.
  */
@@ -55,7 +57,7 @@ const BASE = `http://127.0.0.1:${server.address().port}`;
 
 const browser = await chromium.launch({
   executablePath: '/usr/bin/google-chrome',
-  args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
+  args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 
 const errors = [];
@@ -70,7 +72,7 @@ async function runPass(tag, viewport, mobile) {
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`[${tag}] pageerror: ${e.message}`));
   page.on('console', (m) => {
-    if (m.type() === 'error' && !browserNoise.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`);
+    if ((m.type() === 'error' || m.type() === 'warning') && !browserNoise.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`);
   });
 
   const step = async (name, fn) => {
@@ -87,6 +89,61 @@ async function runPass(tag, viewport, mobile) {
       await page.screenshot({ path: SHOT('title', tag) });
     });
 
+    const press = async (sel) => { if (mobile) await page.tap(sel); else await page.click(sel); };
+    const attr = (name) => page.evaluate((n) => document.documentElement.getAttribute(n), name);
+    const expectAttr = async (name, want) => {
+      await page.waitForFunction(([n, w]) => document.documentElement.getAttribute(n) === w, [name, want], { timeout: 3000 })
+        .catch(async () => { throw new Error(`${name}=${await attr(name)}, expected ${want}`); });
+    };
+
+    await step('graphics settings: presets, override, persistence', async () => {
+      await expectAttr('data-gfx-preset', 'low'); // Auto on the software GPU
+      await press('#cc-settings-open');
+      await page.waitForSelector('#gfx-preset', { state: 'visible' });
+      const autoLabel = await page.locator('#gfx-preset option[value="auto"]').textContent();
+      if (!/Auto \(detected: Low\)/.test(autoLabel || '')) throw new Error('auto label: ' + autoLabel);
+      await page.selectOption('#gfx-preset', 'low');
+      await expectAttr('data-gfx-preset', 'low');
+      if (!/no effects/.test(await page.locator('#gfx-summary').textContent())) throw new Error('low summary');
+      await page.selectOption('#gfx-preset', 'high');
+      await expectAttr('data-gfx-preset', 'high');
+      await expectAttr('data-gfx-particles', 'high');
+      if (await page.locator('canvas.cc-fx').count() !== 1) throw new Error('effects canvas missing on High');
+      const fromPreset = await page.locator('#gfx-particles option[value="preset"]').textContent();
+      if (fromPreset !== 'From preset (High)') throw new Error('from-preset label: ' + fromPreset);
+      await page.selectOption('#gfx-particles', 'off');
+      await expectAttr('data-gfx-particles', 'off');
+      const sum = await page.locator('#gfx-summary').textContent();
+      if (/particles/.test(sum) || !/shadows medium/.test(sum) || !/\d+×\d+ px/.test(sum)) throw new Error('summary after override: ' + sum);
+      await page.check('#gfx-fps');
+      await page.waitForSelector('#cc-fps');
+      await page.screenshot({ path: SHOT('settings', tag) });
+      // the dialog fits the viewport (scrolls inside when taller)
+      const box = await page.locator('.cc-settings-card').boundingBox();
+      const vp = page.viewportSize();
+      if (box.x < 0 || box.y < 0 || box.x + box.width > vp.width + 1 || box.y + box.height > vp.height + 1) throw new Error('settings card cut off: ' + JSON.stringify(box));
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('.cc-settings', { state: 'hidden' });
+
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.waitForSelector('.cc-title #cc-play');
+      await expectAttr('data-gfx-preset', 'high');
+      await expectAttr('data-gfx-particles', 'off');
+      await page.waitForSelector('#cc-fps');
+      await press('#cc-settings-open');
+      if (await page.inputValue('#gfx-preset') !== 'high') throw new Error('preset not restored');
+      if (await page.inputValue('#gfx-particles') !== 'off') throw new Error('override not restored');
+      // choosing a preset clears overrides
+      const target = mobile ? 'auto' : 'ultra';
+      await page.selectOption('#gfx-preset', target);
+      await expectAttr('data-gfx-preset', mobile ? 'low' : 'ultra');
+      if (await page.inputValue('#gfx-particles') !== 'preset') throw new Error('override not cleared by preset');
+      await page.uncheck('#gfx-fps');
+      await press('#cc-settings-close');
+      await page.waitForSelector('.cc-settings', { state: 'hidden' });
+      if (await page.locator('#cc-fps').count()) throw new Error('fps readout still shown');
+    });
+
     await step('start journey stage 1', async () => {
       await page.click('#cc-play');
       await page.waitForSelector('.cc-game .cc-board');
@@ -101,6 +158,14 @@ async function runPass(tag, viewport, mobile) {
         window.__ccMirror = window.CCRules.createGame(window.CCContent.JOURNEY[0]);
       });
       await page.screenshot({ path: SHOT('board', tag) });
+    });
+
+    await step('in-game settings button opens the graphics panel', async () => {
+      await press('#cc-settings-open');
+      await page.waitForSelector('#gfx-preset', { state: 'visible' });
+      await page.keyboard.press('s'); // shortcut keys stay inactive while the panel is open
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('.cc-settings', { state: 'hidden' });
     });
 
     await step('hint button suggests a legal action', async () => {

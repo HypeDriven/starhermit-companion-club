@@ -1,0 +1,107 @@
+/* Companion Club — graphics effects and the Settings panel.
+ * Effects are keyed on the data-gfx-* attributes js/fx.js sets on <html>;
+ * with every category at its Low tier the page looks and costs exactly like
+ * the plain board (no extra shadows, gradients, filters or animation). */
+
+/* ---------- always-on: settings button, panel, effects canvas, fps ---------- */
+.cc-title-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+.cc-gear{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;white-space:nowrap;flex:none}
+.cc-gear>span[aria-hidden]{font-size:1.15em;line-height:1}
+.cc-game header{position:relative}
+.cc-result{z-index:10}
+.cc-fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30;mix-blend-mode:screen}
+.cc-fps{position:fixed;left:8px;bottom:8px;z-index:50;padding:3px 8px;border-radius:6px;background:#000a;color:#f3e6d8;font:600 12px/1.3 ui-monospace,monospace;pointer-events:none}
+.cc-settings{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:#130d0be8;overflow:auto}
+.cc-settings[hidden]{display:none}
+.cc-settings-card{width:min(100%,480px);max-height:calc(100dvh - 32px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:clamp(14px,3vw,24px)}
+.cc-settings-card header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.cc-settings-card h2{margin:0;color:var(--accent)}
+.cc-settings-card h3{margin:8px 0 10px;font-size:1.05rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.cc-settings-card header button{padding:6px 16px}
+.cc-set-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);align-items:center;gap:10px;margin:8px 0}
+.cc-set-row>span{min-width:0;overflow-wrap:anywhere}
+.cc-set-row select{min-height:44px;width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--text);font:inherit;padding:6px 8px}
+.cc-set-row select:focus-visible,.cc-set-row input:focus-visible,.cc-set-check input:focus-visible{outline:3px solid white;outline-offset:2px}
+.cc-set-row input[type=range]{width:100%;min-height:44px;accent-color:var(--accent)}
+.cc-set-row output{color:var(--accent);font-weight:700}
+.cc-set-check{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.cc-set-check input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.cc-set-summary{margin:12px 0 0;color:var(--muted);font-size:.88rem;line-height:1.4;overflow-wrap:anywhere}
+.cc-set-note{margin:8px 0 0;color:#ffb3a3;font-size:.88rem}
+@media(max-width:420px){.cc-set-row{grid-template-columns:1fr;gap:4px}}
+@media(max-width:700px){
+  .cc-game header .cc-gear{position:absolute;top:0;right:0;padding:6px 10px}
+  .cc-game header .cc-gear-label{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+}
+@media(max-height:500px) and (orientation:landscape){.cc-game header .cc-gear{padding:4px 10px}}
+
+/* Cell box-shadow is composed from layers so rings, mess and depth combine. */
+.cc-cell{box-shadow:var(--cell-mess,0 0 #0000),var(--cell-ring,0 0 #0000),var(--cell-bevel,0 0 #0000),var(--sh-cell,0 0 #0000)}
+.cc-cell.selected{--cell-ring:0 0 0 2px #f6b85f55}
+.cc-cell.messy{--cell-mess:inset 0 0 0 2px #e0705a}
+
+/* ---------- shadows ---------- */
+html[data-gfx-shadows=low]{--sh-panel:0 4px 14px #0006;--sh-cell:0 2px 4px #0005;--sh-token:drop-shadow(0 2px 2px #0007)}
+html[data-gfx-shadows=medium]{--sh-panel:0 10px 28px #0008,0 2px 6px #0005;--sh-cell:0 4px 8px #0007,0 1px 2px #0006;--sh-token:drop-shadow(0 4px 4px #0008)}
+html[data-gfx-shadows=high]{--sh-panel:0 18px 44px #000a,0 4px 10px #0006;--sh-cell:0 7px 14px #0008,0 2px 3px #0007;--sh-token:drop-shadow(0 6px 5px #0009) drop-shadow(0 1px 1px #000a)}
+html:not([data-gfx-shadows=off]) .cc-layout>aside,
+html:not([data-gfx-shadows=off]) .cc-board-wrap,
+html:not([data-gfx-shadows=off]) .cc-title section,
+html:not([data-gfx-shadows=off]) .cc-result-card,
+html:not([data-gfx-shadows=off]) .cc-settings-card{box-shadow:var(--sh-panel)}
+html:not([data-gfx-shadows=off]) .cc-cell b{filter:var(--sh-token)}
+
+/* ---------- surface detail ---------- */
+html[data-gfx-detail=detailed]{
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .86 0 0 0 0 .7 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --bg-detail:radial-gradient(ellipse at 15% 0%,#2c1d17 0,#0000 55%),radial-gradient(ellipse at 80% 110%,#24170f 0,#0000 60%);
+}
+html[data-gfx-detail=detailed] body{min-height:100dvh;background:var(--bg-glow,none),var(--bg-detail),var(--bg)}
+html[data-gfx-detail=detailed] .cc-layout>aside,
+html[data-gfx-detail=detailed] .cc-title section,
+html[data-gfx-detail=detailed] .cc-result-card,
+html[data-gfx-detail=detailed] .cc-settings-card{background:var(--noise),linear-gradient(#ffffff0b,#fff0 38%),var(--panel);border:1px solid #ffffff0f}
+html[data-gfx-detail=detailed] .cc-title section{background:var(--noise),linear-gradient(#ffffff0b,#fff0 38%),#2b201de6}
+html[data-gfx-detail=detailed] button:not(.cc-cell){background:linear-gradient(#47362f,#362822);box-shadow:inset 0 1px 0 #ffffff14,inset 0 -2px 0 #0003;transition:transform .08s,border-color .15s}
+html[data-gfx-detail=detailed] button:not(.cc-cell):active{transform:translateY(1px)}
+html[data-gfx-detail=detailed] .cc-title #cc-play{background:linear-gradient(#ffd08a,#f0a646);color:#28190d;box-shadow:inset 0 1px 0 #fff6,inset 0 -3px 0 #b8702a55}
+html[data-gfx-detail=detailed] .cc-friend{border-left:5px solid var(--tint,var(--line))}
+html[data-gfx-detail=detailed] .cc-cell{--cell-bevel:inset 0 1px 0 #ffffff17,inset 0 -3px 0 #0000003d;background:repeating-linear-gradient(90deg,#ffffff06 0 1px,#0000 1px 25%),linear-gradient(172deg,#402f29,#30231e)}
+html[data-gfx-detail=detailed] .cc-cell.station{background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--station-tint,#f6b85f) 42%,#0000) 0,#0000 70%),linear-gradient(172deg,#57413a,#3f2e28);border-top-color:color-mix(in srgb,var(--station-tint,#f6b85f) 75%,#fff)}
+html[data-gfx-detail=detailed] .cc-cell.blocked{opacity:.62;background:repeating-linear-gradient(45deg,#4b382e 0 7px,#3a2b24 7px 14px);--cell-bevel:inset 0 0 0 2px #0000004d}
+html[data-gfx-detail=detailed] .cc-cell.friend b{display:grid;place-items:center;width:1.6em;height:1.6em;line-height:1;border-radius:50%;
+  background:radial-gradient(circle at 34% 27%,#ffffff99 0 5%,#fff0 24%),radial-gradient(circle at 50% 62%,color-mix(in srgb,var(--tint,#888) 88%,#000),color-mix(in srgb,var(--tint,#888) 42%,#1a1210) 74%);
+  box-shadow:inset 0 -4px 7px #0006,inset 0 2px 3px #ffffff4d,0 0 0 2px #1a1210aa}
+html[data-gfx-detail=detailed] .cc-cell.friend.selected b{box-shadow:inset 0 -4px 7px #0006,inset 0 2px 3px #ffffff4d,0 0 0 3px var(--accent)}
+html[data-gfx-detail=detailed] .cc-station-badge{background:#1a1210cc;border-radius:8px;padding:0 4px}
+html[data-gfx-detail=detailed] .cc-result-art{border:1px solid #ffffff1a}
+
+/* ---------- glow ---------- */
+html[data-gfx-bloom=on]{--bg-glow:radial-gradient(ellipse at 88% -8%,#ffb86a26 0,#0000 55%)}
+html[data-gfx-bloom=on] body{min-height:100dvh;background:var(--bg-glow),var(--bg-detail,none),var(--bg)}
+html[data-gfx-bloom=on] .cc-cell.selected{--cell-ring:0 0 0 2px #f6b85faa,0 0 18px 3px #f6b85f59}
+html[data-gfx-bloom=on] .cc-friend.selected{box-shadow:0 0 0 2px #f6b85f77,0 0 16px 2px #f6b85f40}
+html[data-gfx-bloom=on] .cc-cell.messy{--cell-mess:inset 0 0 0 2px #e0705a,0 0 14px #e0705a70}
+html[data-gfx-bloom=on] .cc-cell.station:not(.messy) b{filter:var(--sh-token,) drop-shadow(0 0 7px color-mix(in srgb,var(--station-tint,#f6b85f) 70%,#0000))}
+html[data-gfx-bloom=on] .cc-title h1,html[data-gfx-bloom=on] .cc-game h1{text-shadow:0 0 22px #f6b85f59}
+html[data-gfx-bloom=on] .cc-title #cc-play{box-shadow:0 0 24px #f6b85f66}
+html[data-gfx-bloom=on][data-gfx-detail=detailed] .cc-title #cc-play{box-shadow:inset 0 1px 0 #fff6,inset 0 -3px 0 #b8702a55,0 0 24px #f6b85f66}
+html[data-gfx-bloom=on] .cc-game header b,html[data-gfx-bloom=on] .cc-score-total td{text-shadow:0 0 10px #f6b85f80}
+
+/* ---------- colour grade + vignette (imagery only; text is never graded) ---------- */
+html[data-gfx-grade=on] .cc-title-art,html[data-gfx-grade=on] .cc-result-art{filter:saturate(1.18) contrast(1.07) sepia(.12)}
+html[data-gfx-grade=on] .cc-title::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 50% 42%,#0000 42%,#0b0706c4 100%),linear-gradient(160deg,#ff9f4a14,#3a1f5a14)}
+html[data-gfx-grade=on] .cc-board-wrap{background:radial-gradient(ellipse at 50% 30%,#ffc98a17 0,#0000 60%),radial-gradient(ellipse at 50% 50%,#0000 50%,#0000005c 100%),linear-gradient(#2b201dd9,#2b201dd9),var(--panel) url(../assets/floor-planks.webp) center/256px repeat}
+
+/* ---------- ambient motion ---------- */
+@keyframes cc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes cc-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes cc-drift{from{transform:scale(1.03) translate(0,0)}to{transform:scale(1.09) translate(-1.4%,-1%)}}
+html[data-gfx-ambient=animated] .cc-cell.friend b{animation:cc-bob 2.6s ease-in-out infinite}
+html[data-gfx-ambient=animated] .cc-cell.friend:nth-child(odd) b{animation-delay:-1.3s}
+html[data-gfx-ambient=animated] .cc-cell.selected::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 14px #f6b85f59;animation:cc-pulse 2.4s ease-in-out infinite}
+html[data-gfx-ambient=animated] .cc-title-art{animation:cc-drift 28s ease-in-out infinite alternate}
+html[data-reduced-motion] *,html[data-reduced-motion] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){*,*::after{animation:none!important;transition:none!important}}
+.cc-title .cc-gear{background:var(--soft);color:var(--text);font-weight:600}
+html[data-gfx-detail=detailed] .cc-title .cc-gear{background:linear-gradient(#47362f,#362822)}

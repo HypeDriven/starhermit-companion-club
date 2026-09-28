@@ -7,6 +7,11 @@ var doc = Store.load();                 // persisted save document (offline cach
 var state = null, selected = null, startedAt = 0, message = '';
 var roundStreak = 0, roundRecorded = false;
 var root = document.getElementById('cc-root');
+var Fx = window.CCFx, Settings = window.CCSettings;
+if (Fx && doc.settings && doc.settings.reducedMotion) Fx.setReducedMotion(true);
+function settingsButton() { return Settings ? Settings.buttonHtml() : ''; }
+function bindSettings() { var b = document.getElementById('cc-settings-open'); if (b && Settings) b.addEventListener('click', Settings.open); }
+function hex(n) { return '#' + ('00000' + (n >>> 0).toString(16)).slice(-6); }
 
 // ---- platform handshake: token, cloud save (remote wins), account line ----
 try { Platform.init(); } catch (e) { /* offline */ }
@@ -38,8 +43,9 @@ function renderAccountLine() {
 }
 
 function title() {
-  root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p>' + accountLine() + '<button id="cc-play" type="button">Play</button></section></main>';
+  root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p>' + accountLine() + '<div class="cc-title-actions"><button id="cc-play" type="button">Play</button>' + settingsButton() + '</div></section></main>';
   renderAccountLine();
+  bindSettings();
   document.getElementById('cc-play').addEventListener('click', start);
 }
 function start() {
@@ -71,6 +77,19 @@ function command(cmd) {
   out.events.forEach(function (e) { if (e.type === 'serve' && e.streak > roundStreak) roundStreak = e.streak; });
   if (state.terminal && !roundRecorded) { roundRecorded = true; recordRound(); }
   render();
+  sparkle(out.events);
+}
+// Effects-layer bursts at the cells where things happened (no-op when the
+// particles setting is off or motion is reduced).
+function sparkle(events) {
+  if (!Fx) return;
+  var cols = state.cfg.board.cols, cells = root.querySelectorAll('.cc-board .cc-cell');
+  function rectAt(cell) { var el = cell && cells[cell.y * cols + cell.x]; return el ? el.getBoundingClientRect() : null; }
+  events.forEach(function (e) {
+    if (e.type === 'serve') { var c = companion(e.companion); Fx.burst(c && rectAt(c), 'serve'); }
+    else if (e.type === 'tidy') Fx.burst(rectAt(e.cell), 'tidy');
+    else if (e.type === 'win') Fx.burst({ left: 0, top: 0, width: innerWidth, height: innerHeight }, 'win');
+  });
 }
 
 // Persist the finished round and unlock the achievements the game can
@@ -126,12 +145,13 @@ function renderBoard() {
     var stationLabel = s ? activityName(s.activity)+(s.messy?', messy':'') : '';
     var label=c ? companionName(c.id)+(s?' at '+stationLabel:'') : s ? stationLabel : blocked?'Wall':'Open floor';
     var badge = s && c ? '<i class="cc-station-badge'+(s.messy?' messy':'')+'" aria-hidden="true">'+(Content.ACTIVITIES[s.activity]?.icon || '◆')+(s.messy?'!':'')+'</i>' : '';
-    html += '<button type="button" class="cc-cell '+(c?'friend ':'')+(s?'station ':'')+(s&&s.messy?'messy ':'')+(blocked?'blocked ':'')+(c&&c.id===selected?'selected':'')+'" '+(c?'data-friend="'+c.id+'"':'disabled')+' aria-label="Row '+(y+1)+', column '+(x+1)+': '+label+'">'+badge+'<b aria-hidden="true">'+text+'</b><span>'+label+'</span></button>';
+    var tint = c ? Content.COMPANIONS[c.id]?.color : s ? Content.ACTIVITIES[s.activity]?.color : null;
+    html += '<button type="button"'+(tint!=null?' style="--tint:'+hex(tint)+(s?';--station-tint:'+hex(Content.ACTIVITIES[s.activity]?.color||0)+'"':'"'):'')+' class="cc-cell '+(c?'friend ':'')+(s?'station ':'')+(s&&s.messy?'messy ':'')+(blocked?'blocked ':'')+(c&&c.id===selected?'selected':'')+'" '+(c?'data-friend="'+c.id+'"':'disabled')+' aria-label="Row '+(y+1)+', column '+(x+1)+': '+label+'">'+badge+'<b aria-hidden="true">'+text+'</b><span>'+label+'</span></button>';
   }
   return html;
 }
 function renderFriends() {
-  return state.companions.map(function (c) { return '<button type="button" class="cc-friend '+(c.id===selected?'selected':'')+'" data-friend="'+c.id+'"><b>'+companionName(c.id)+'</b><span>Wants '+activityName(c.wish?.activity)+' · '+(c.wish?.patience ?? '—')+' patience</span></button>'; }).join('');
+  return state.companions.map(function (c) { return '<button type="button" style="--tint:'+hex(Content.COMPANIONS[c.id]?.color||0)+'" class="cc-friend '+(c.id===selected?'selected':'')+'" data-friend="'+c.id+'"><b>'+companionName(c.id)+'</b><span>Wants '+activityName(c.wish?.activity)+' · '+(c.wish?.patience ?? '—')+' patience</span></button>'; }).join('');
 }
 function resultHtml() {
   var t = state.terminal, s = state.score;
@@ -158,14 +178,15 @@ function render() {
       : active.dataset && active.dataset.dir ? '[data-dir="' + active.dataset.dir + '"]'
       : null)
     : null;
-  root.innerHTML = '<main class="cc-game"><header><div><h1>Companion Club</h1><p>Clubhouse Day 1</p></div><div>Served <b>'+state.fulfilled+'/'+state.cfg.goal+'</b> · Turns <b>'+state.tick+'</b> · Score <b>'+state.score.total+'</b></div></header><section class="cc-layout"><aside><h2>Friends</h2><div class="cc-friends">'+renderFriends()+'</div><p class="cc-message" role="status">'+message+'</p><div class="cc-pad"><button data-dir="up">↑</button><button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button></div><div class="cc-actions"><button id="cc-serve">Serve wish</button><button id="cc-tidy">Tidy</button><button id="cc-hint">Hint</button></div></aside><section class="cc-board-wrap"><h2>Clubhouse floor</h2><div class="cc-board" style="--cols:'+state.cfg.board.cols+';--rows:'+state.cfg.board.rows+'">'+renderBoard()+'</div></section></section>'+(state.terminal?resultHtml():'')+'</main>';
+  root.innerHTML = '<main class="cc-game"><header><div><h1>Companion Club</h1><p>Clubhouse Day 1</p></div><div>Served <b>'+state.fulfilled+'/'+state.cfg.goal+'</b> · Turns <b>'+state.tick+'</b> · Score <b>'+state.score.total+'</b></div>'+settingsButton()+'</header><section class="cc-layout"><aside><h2>Friends</h2><div class="cc-friends">'+renderFriends()+'</div><p class="cc-message" role="status">'+message+'</p><div class="cc-pad"><button data-dir="up">↑</button><button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button></div><div class="cc-actions"><button id="cc-serve">Serve wish</button><button id="cc-tidy">Tidy</button><button id="cc-hint">Hint</button></div></aside><section class="cc-board-wrap"><h2>Clubhouse floor</h2><div class="cc-board" style="--cols:'+state.cfg.board.cols+';--rows:'+state.cfg.board.rows+'">'+renderBoard()+'</div></section></section>'+(state.terminal?resultHtml():'')+'</main>';
   root.querySelectorAll('[data-friend]').forEach(function (b) { b.addEventListener('click', function () { choose(b.dataset.friend); }); });
   root.querySelectorAll('[data-dir]').forEach(function (b) { b.addEventListener('click', function () { move(b.dataset.dir); }); });
   document.getElementById('cc-serve').addEventListener('click', serve); document.getElementById('cc-tidy').addEventListener('click', tidy); document.getElementById('cc-hint').addEventListener('click', hint);
+  bindSettings();
   var again=document.getElementById('cc-again'); if(again){ again.addEventListener('click',start); again.focus(); }
   else if (focusSel) { var el = root.querySelector(focusSel); if (el) el.focus(); }
 }
-window.addEventListener('keydown', function(e){ if(!state||state.terminal)return; var d={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key]; if(d){e.preventDefault();move(d);} else if(e.key.toLowerCase()==='s')serve(); else if(e.key.toLowerCase()==='t')tidy(); else if(e.key.toLowerCase()==='h')hint(); });
+window.addEventListener('keydown', function(e){ if(!state||state.terminal||(Settings&&Settings.isOpen()))return; var d={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key]; if(d){e.preventDefault();move(d);} else if(e.key.toLowerCase()==='s')serve(); else if(e.key.toLowerCase()==='t')tidy(); else if(e.key.toLowerCase()==='h')hint(); });
 document.addEventListener('visibilitychange', function(){ if(!Audio) return; if(document.hidden) Audio.suspend && Audio.suspend(); else Audio.resume && Audio.resume(); });
 title();
 })();

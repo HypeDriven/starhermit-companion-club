@@ -6,24 +6,29 @@
 **Players:** 1, local, offline after load.
 **Session length:** one club day of Welcome Mat lasts 7–30 turns, about one to three minutes.
 **Platforms:** desktop and mobile browsers (Chrome-class), portrait and landscape, no install.
-**Rendering:** semantic HTML/CSS. The clubhouse floor is a CSS grid of `<button>` cells; there is no canvas or WebGL in the shipped page.
+**Rendering:** semantic HTML/CSS. The clubhouse floor is a CSS grid of `<button>` cells; graphics effects are CSS keyed on `data-gfx-*` attributes plus one click-through 2D effects canvas (section 8, Graphics). There is no WebGL renderer in the shipped page.
 
 ## 1. File map
 
 | Path | Role |
 |---|---|
-| `index.html` | Entry point named in `starhermit.txt`. Loads the six classic scripts below with `defer`, in dependency order. |
+| `index.html` | Entry point named in `starhermit.txt`. Loads the classic scripts below with `defer`, in dependency order, and both stylesheets. |
 | `css/style.css` | All layout, palette tokens, responsive rules (one breakpoint at 700 px). |
+| `css/gfx.css` | Graphics effects keyed on `html[data-gfx-*]` (shadows, glow, grade, surface detail, ambient motion), the Settings button/panel, effects canvas and fps readout styles. |
 | `js/rng.js` | `CCRNG`: mulberry32 PRNG, FNV-1a string hash, three derived streams (rules / decor / av). |
 | `js/rules.js` | `CCRules`: pure deterministic rules engine (board generation, legality, resolution, scoring, terminal states, hint, serialization, command validation). |
 | `js/content.js` | `CCContent`: companions, activities, themes, decor catalog, 40 journey stages, 6 challenges, 3 practice presets, endless ruleset, daily generator, 5 tutorial lessons, 10 achievements. Data only. |
 | `js/store.js` | `CCStore`: versioned, checksummed local save document and local leaderboard sort. Loaded by `index.html` but not called by `main.js` today. |
 | `js/audio.js` | `CCAudio`: WebAudio buses, synthesized cues, authored Opus clips mapped from `sfx/manifest.json`, ambience loop, generative pad. |
-| `js/main.js` | The application: title screen, one playable stage, board/HUD rendering, input, results overlay. |
+| `js/gfx.js` | `CCGfx`: pure graphics quality model — presets, categories, `detectPreset`, `resolve`, `choosePreset`, `presetTier`, `pixelRatio`, `describe`, `adaptStep`. Also loads under Node. |
+| `js/fx.js` | `CCFx`: graphics runtime — GPU detection, saved settings, `data-gfx-*` attributes, effects canvas (dust motes, lamp flicker, sparkle bursts), adaptive resolution, fps readout. |
+| `js/settings.js` | `CCSettings`: the Settings dialog (Graphics section) and its strings in nine locales; the Settings button markup. |
+| `js/main.js` | The application: title screen, one playable stage, board/HUD rendering, input, results overlay, sparkle bursts on serve/tidy/win. |
 | `js/render3d.js` | Three.js presentation module (procedural clubhouse, companions, stations, particles). Not referenced by `index.html`; not loaded. |
 | `vendor/three.module.min.js` | Three.js (2023 build) for `render3d.js`; not loaded by the page. |
 | `server.js` | Static file server for the distribution (`PORT` env, default 8000). Refuses `tests/`, `tools/`, `node_modules/` and dotfiles. |
 | `tests/rules.test.mjs` | `npm test`: node:test unit tests for rules, content, RNG and store. |
+| `tests/gfx.test.mjs` | `npm test`: node:test unit tests for the graphics quality model. |
 | `tests/e2e.mjs` | `npm run test:e2e`: Playwright playthrough of the real UI on desktop and mobile viewports. |
 | `sfx/*.opus`, `sfx/manifest.txt`, `sfx/manifest.json`, `sfx/manifest.md` | 22 authored clips; canonical manifest; generator manifest read by `audio.js`; generator output log. |
 | `assets/key-art.webp`, `assets/results-art.webp`, `assets/floor-planks.webp` | Title backdrop, results illustration, board floor texture. |
@@ -131,11 +136,12 @@ Input rules: keyboard shortcuts are ignored on the title screen and once the gam
 
 ## 7. Screens and UI flow
 
-State machine as implemented: `title → play ⇄ (results overlay) → play`. There is no pause, settings or help screen; hiding the tab suspends the audio context and restoring it resumes (`visibilitychange`).
+State machine as implemented: `title → play ⇄ (results overlay) → play`, with the Settings dialog openable over the title or play screen. There is no pause or help screen; hiding the tab suspends the audio context and restoring it resumes (`visibilitychange`).
 
-- **Title (`title()`):** full-viewport grid, key art as an absolutely positioned `<img>` at 55 % opacity fading out toward the bottom, a centered card (max 650 px, `#2b201de6`) with the h1, pitch and Play. If the art fails to load the `<img>` removes itself and the flat `--bg` shows.
-- **Play (`render()`):** max-width 1280 px. Header: title + "Clubhouse Day 1" left, `Served n/goal · Turns t · Score s` right. Two-column grid: left aside (`minmax(250px, .8fr)`) with Friends cards (name, "Wants Snack · 11 patience" or "Wants rest · — patience" during cooldown), status line, direction pad, Serve/Tidy/Hint; right panel (`minmax(0, 1.8fr)`) titled "Clubhouse floor" with the board grid over the plank texture. Cells are square (`aspect-ratio: 1`), show an emoji (companion, station, `▦` furniture, `·` floor) plus a small text label.
+- **Title (`title()`):** full-viewport grid, key art as an absolutely positioned `<img>` at 55 % opacity fading out toward the bottom, a centered card (max 650 px, `#2b201de6`) with the h1, pitch, Play and a secondary Settings button. If the art fails to load the `<img>` removes itself and the flat `--bg` shows.
+- **Play (`render()`):** max-width 1280 px. Header: title + "Clubhouse Day 1" left, `Served n/goal · Turns t · Score s`, then the Settings button (⚙ + label; icon-only in the header's top-right corner at ≤ 700 px). Two-column grid: left aside (`minmax(250px, .8fr)`) with Friends cards (name, "Wants Snack · 11 patience" or "Wants rest · — patience" during cooldown), status line, direction pad, Serve/Tidy/Hint; right panel (`minmax(0, 1.8fr)`) titled "Clubhouse floor" with the board grid over the plank texture. Cells are square (`aspect-ratio: 1`), show an emoji (companion, station, `▦` furniture, `·` floor) plus a small text label.
 - **Results (`resultHtml()`):** fixed full-screen backdrop `#130d0be8`, centered card (max 520 px, scrolls inside if taller than the viewport) with the results illustration, headline ("Club day complete!" or "Club day ended"), reason sentence, a table of non-zero score components and Total, and Play again (auto-focused). Marked `role="dialog" aria-modal="true"`.
+- **Settings (`CCSettings.open`):** fixed backdrop, centered card (max 480 px, scrolls inside when taller than the viewport) marked `role="dialog" aria-modal="true"` with a Close button and the Graphics section (see Graphics below). Escape or a backdrop click closes it and focus returns to the Settings button; Tab cycles inside the dialog; game shortcut keys are inactive while it is open.
 - **≤ 700 px (portrait phones):** header stacks; layout becomes one column with the board first and the control aside second; cell text labels are visually hidden (still in `aria-label`); the results art is capped at 28 dvh so the table and button fit a 390×844 screen. Landscape phones keep the two-column layout; the board panel shrinks with `minmax(0, …)` so nothing overflows. `viewport-fit=cover` is set; the page has no fixed bottom bar, so no control sits under browser chrome.
 
 Must never be cut off: the header counters, all three action buttons, the direction pad, the status line, the Total row and Play again.
@@ -150,7 +156,19 @@ Must never be cut off: the header counters, all three action buttons, the direct
 
 **Hero:** the board panel — the largest element on every layout, sitting on the plank texture with the panel color blended over it so cells stay high-contrast.
 
-**Motion:** none is authored; state changes are instant re-renders, which also means reduced-motion preferences change nothing. Illustrations are static.
+**Motion:** state changes are instant re-renders. Ambient motion (Graphics setting) adds a 2.6 s idle bob on friend tokens, a slow pulse inside the selected cell, a 28 s drift on the title art and the lamp flicker; serve/tidy/win bursts come from the particles setting. All of it stops under `prefers-reduced-motion` or the save's `reducedMotion` setting (`html[data-reduced-motion]`): CSS animations are disabled, the canvas draws one still frame and bursts are skipped.
+
+**Graphics.** Quality is a model in `js/gfx.js` applied by `js/fx.js`; with every category at its Low tier the page is exactly the plain board with no canvas and no per-frame work. Effects by category:
+- **Shadows** (off/low/medium/high): layered drop shadows under panels, the title/results/settings cards, board cells, and drop-shadow filters under emoji tokens.
+- **Glow** (off/on): a warm lamp glow in the page backdrop, glowing selection rings on cells and Friends cards, a red glow on messy stations, a coloured halo on clean station icons, glowing title, header numbers, Play button and results Total.
+- **Colour grade** (off/on): warm grade (saturation, contrast, slight sepia) on the title and results illustrations, a vignette plus warm/cool wash over the title art, and a lamp pool and vignette over the plank texture of the board panel. Text is never graded.
+- **Particles** (off/low/high): dust motes drifting up through the light (22 or 56) on a fixed, click-through canvas blended with `screen`, plus sparkle bursts: gold stars at the serving friend's cell, soap bubbles at a tidied station, full-screen confetti on a win (12/26 or 50/110 particles).
+- **Ambient motion** (static/animated): the animations listed under Motion; with Glow on, the canvas also flickers a lamp light from the upper right.
+- **Surface detail** (plain/detailed): fine noise and a top highlight on panels, bevelled gradient buttons with a press offset, plank-grain floor cells with bevels, station cells tinted by their activity colour with a coloured top edge, furniture as striped crates (brighter than Plain), friends as glossy discs in their companion colour, Friends cards with a companion-colour edge.
+
+Presets: **Low** (everything off/plain/static), **Balanced** (shadows low, glow, grade, particles low, static, detailed; canvas pixel ratio cap 1.5), **High** (shadows medium, particles high, animated; cap 2), **Ultra** (shadows high, render scale ×1.25; cap 2). **Auto** (default) picks from the WebGL `UNMASKED_RENDERER` string (probed once with `failIfMajorPerformanceCaveat`, then released): software renderers get Low, NVIDIA/discrete AMD/Apple M get High, others Balanced; touch/mobile devices are capped at Balanced. The effects canvas's pixel ratio is min(devicePixelRatio, cap) × preset scale × render scale × adaptive scale. Adaptive resolution averages 90 frames and steps the canvas scale down 0.1 (to 0.6) above 26 ms and up 0.05 (to 1) below 14 ms. The canvas exists only when particles are on or glow flicker is animated, and its loop runs only while something moves (or the fps readout is on) and the tab is visible.
+
+The Settings dialog's **Graphics** section offers: Quality (`#gfx-preset`: Auto (detected: <tier>) / Low / Balanced / High / Ultra); Render scale (`#gfx-scale`, 50–200 %); one select per category (`#gfx-shadows`, `#gfx-bloom`, `#gfx-grade`, `#gfx-particles`, `#gfx-ambient`, `#gfx-detail`, default "From preset (<tier>)"); Adaptive resolution (`#gfx-adaptive`, on); Show frame rate (`#gfx-fps`, off; a small `#cc-fps` readout bottom-left); a summary line "GPU name · effects · W×H px" (`#gfx-summary`) and a note when the effects canvas cannot be created (the game then draws without it). Choosing a preset clears the overrides. Changes apply immediately and persist per device in `localStorage` under `companionclub.graphics.v1` (not in the cloud-synced save, since they depend on the device). The resolved tiers are exposed as `data-gfx-preset`, `data-gfx-shadows`, … on `<html>`.
 
 **Visual assets the design calls for:** title key art (clubhouse interior with all four friends and all six stations), a results-screen celebration illustration, a tileable plank texture for the board, a platform cover derived from the key art with the title set in type, plus the existing favicon/icon. All are shipped (section 15).
 
@@ -187,7 +205,7 @@ Must never be cut off: the header counters, all three action buttons, the direct
 
 ## 10. Localization
 
-Shipped language: English only (`<html lang="en">`), spelled as US English. Strings live in three places: UI copy and result sentences in `js/main.js`, companion/station/stage names and intro lines in `js/content.js`, caption words in `js/audio.js`. There is no language selection, no string table and no expansion allowance beyond the layouts' flexible widths (Friends cards wrap; buttons use `flex:1` with wrapping). The nine required locales (en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT) are design intent, not shipped.
+Shipped language: English only (`<html lang="en">`), spelled as US English — except the Settings button and dialog, whose strings (`js/settings.js` `STRINGS`) ship in en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR and it-IT, chosen from `navigator.languages` (exact tag, then language fallback, else en-US); the dialog carries its own `lang`. Strings live in three places: UI copy and result sentences in `js/main.js`, companion/station/stage names and intro lines in `js/content.js`, caption words in `js/audio.js`. There is no language selection, no string table and no expansion allowance beyond the layouts' flexible widths (Friends cards wrap; buttons use `flex:1` with wrapping). The nine required locales (en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT) are design intent, not shipped.
 
 ## 11. Accessibility
 
@@ -196,7 +214,7 @@ Shipped language: English only (`<html lang="en">`), spelled as US English. Stri
 - **Screen readers:** each cell has `aria-label="Row r, column c: <Pip | Snack, messy | Wall | Open floor>"`; glyphs are `aria-hidden`; the status line is `role="status"` so rejections, hints and turn summaries are announced; results are a labelled modal dialog.
 - **Contrast:** text `#f3e6d8` on `#1a1210` is 15.0:1; muted `#c5ad9d` on `#2b201d` 7.4:1 and on `#3a2b26` 6.3:1; amber on panel 9.0:1. Furniture cells are dimmed to 42 % but also labelled "Wall".
 - **Color independence:** every companion and station has a glyph and a text name; messy state is a word in the label.
-- **Reduced motion:** nothing animates, so `prefers-reduced-motion` needs no special handling.
+- **Reduced motion:** `prefers-reduced-motion: reduce` (or the save's `reducedMotion`) disables every CSS animation and transition, freezes the effects canvas and skips sparkle bursts.
 - **Targets:** all buttons ≥ 44 px tall; the pad and action rows have 6–7 px gaps.
 - **Captions for audio:** every cue has a caption string in `audio.js`; the toggle is not exposed (intent).
 
@@ -208,16 +226,16 @@ Shipped language: English only (`<html lang="en">`), spelled as US English. Stri
 
 - **Module boundaries:** `rng` → `rules` → (`content`, `store`) → `audio` → `main`, each a UMD/IIFE global (`CCRNG`, `CCRules`, `CCContent`, `CCStore`, `CCAudio`). `rules.js` and `content.js` also load under Node (`module.exports`), which is how the unit tests and the e2e mirror use them. `main.js` holds four variables of UI state (`state`, `selected`, `startedAt`, `message`) and rebuilds `#cc-root` with `innerHTML` on every change; no virtual DOM, no framework.
 - **Determinism and replay:** the state is a plain JSON object; `serialize`/`deserialize` round-trip it (version-checked). Same seed + same command list ⇒ same `hashState` (unit-tested). `elapsedMs` is quantized to 100 ms so timing never perturbs hashes. Cosmetic randomness in `audio.js` (`variant`, ±6 % pitch) uses `Math.random` unless `setAvRng` is given a seeded stream (not called by `main.js`).
-- **Persistence:** none in the shipped UI. `store.js` defines `companionclub.save.v1` (FNV checksum, migration guard for future versions, memory fallback when `localStorage` throws).
-- **Performance:** the page is 73 KB of unminified JS (six scripts), one 34 KB title image, a 41 KB results image, a 9 KB texture and 22 Opus clips (476 KB total, fetched lazily on first use). A re-render is a single `innerHTML` assignment of at most 49 cells plus listeners; there is no per-frame work except the audio pad timer.
+- **Persistence:** graphics settings in `localStorage` (`companionclub.graphics.v1`, per device). `store.js` defines `companionclub.save.v1` (FNV checksum, migration guard for future versions, memory fallback when `localStorage` throws).
+- **Performance:** the page is 124 KB of unminified JS (ten scripts) and 15 KB of CSS, one 34 KB title image, a 41 KB results image, a 9 KB texture and 22 Opus clips (476 KB total, fetched lazily on first use). A re-render is a single `innerHTML` assignment of at most 49 cells plus listeners. On Low there is no per-frame work except the audio pad timer; higher presets add CSS effects and at most one `requestAnimationFrame` loop drawing the effects canvas.
 - **Server:** `server.js` serves the root with a MIME table (html, js, css, json, svg, png, webp, ico, opus, txt/md), 403s any path outside the root or under `tests/`, `tools/`, `node_modules/` or a dot-segment, and 404s the rest.
 - **How the e2e drives the real UI:** `tests/e2e.mjs` starts its own static server (ephemeral port, or `PORT`), launches headless Chrome via `playwright-core`, and for each viewport clicks the visible Play, Friends cards, pad/keys, Serve/Tidy/Hint and Play again. To choose which button to press it keeps a mirror `CCRules.createGame(JOURNEY[0])` in the page and asks `CCRules.hint` — the mirror never touches game state, and after each press the header text is compared with the mirror's `fulfilled`/`tick`, so any divergence between UI and rules fails the run.
 
 ## 14. Testing and acceptance criteria
 
-`npm test` (`tests/rules.test.mjs`, node:test, no dependencies) verifies: RNG determinism and stream independence; every authored config (40 journey, 6 challenges, 3 practice, endless, 5 lessons, two daily dates) builds a connected board with a legal opening; identical hashes for identical seed + commands; the serve formula (worked example A), messy/cooldown/mood side effects; tidy scoring and every specific rejection reason; patience decay, expiry, mood and streak reset, harmony loss; win with day and mood bonuses, day-ended, resign and the post-terminal rejection; endless wave advance; hint legality across a 40-turn run and serve preference; daily config purity; serialization and command-shape validation; store checksum/migration/tie-break order.
+`npm test` (`tests/rules.test.mjs`, node:test, no dependencies) verifies: RNG determinism and stream independence; every authored config (40 journey, 6 challenges, 3 practice, endless, 5 lessons, two daily dates) builds a connected board with a legal opening; identical hashes for identical seed + commands; the serve formula (worked example A), messy/cooldown/mood side effects; tidy scoring and every specific rejection reason; patience decay, expiry, mood and streak reset, harmony loss; win with day and mood bonuses, day-ended, resign and the post-terminal rejection; endless wave advance; hint legality across a 40-turn run and serve preference; daily config purity; serialization and command-shape validation; store checksum/migration/tie-break order. `tests/gfx.test.mjs` covers `detectPreset` on sample GPU strings (software, discrete, integrated, mobile cap), `resolve` with auto/explicit presets, overrides, invalid tiers and render-scale clamping, pixel-ratio caps, default toggles, preset choice clearing overrides, `presetTier`/`describe` and the adaptive steps.
 
-`npm run test:e2e` (`tests/e2e.mjs`) verifies on desktop 1280×800 and mobile 390×844 (touch): title renders with Play; Play shows a 4×4 board, 2 friends and `Served 0/3`; H / Hint yields "Hint: …"; Serve off-station shows "not on station"; a full day is played through visible controls with the header in sync every turn until a terminal state; the results overlay appears; Play again resets to `Served 0/3 · Turns 0`; Serve/Tidy/Hint are ≥ 44 px on mobile; zero page errors and zero console errors (browser GPU/autoplay noise excluded). Screenshots are written to `/tmp/companion-club-e2e-<stage>-<viewport>.png`.
+`npm run test:e2e` (`tests/e2e.mjs`) verifies on desktop 1280×800 and mobile 390×844 (touch): title renders with Play; Play shows a 4×4 board, 2 friends and `Served 0/3`; H / Hint yields "Hint: …"; Serve off-station shows "not on station"; a full day is played through visible controls with the header in sync every turn until a terminal state; the results overlay appears; Play again resets to `Served 0/3 · Turns 0`; through the visible Settings button: Auto resolves to Low on the software GPU, Low then High apply (`data-gfx-preset`, effects canvas, summary), a Particles override applies and shows in the summary, the fps readout toggles, the dialog fits the viewport, and preset + override survive a reload, after which choosing a preset clears the override; the in-game Settings button opens the dialog and game keys stay inactive; the desktop playthrough runs on Ultra and the mobile one on Auto/Low; Serve/Tidy/Hint are ≥ 44 px on mobile; zero page errors and zero console errors or warnings (browser GPU/autoplay noise excluded). Screenshots are written to `/tmp/companion-club-e2e-<stage>-<viewport>.png`.
 
 Product QA bar as checkable statements: (1) the first stage's intro line and the Hint button teach the controls without a separate tutorial; (2) every implemented feature — select, move, serve, tidy, hint, results, replay — is reachable with a mouse, keyboard or touch; (3) no console errors or warnings during a full day on either viewport; (4) header, status, pad, actions, board and results table are fully visible at 1280×800, 390×844 portrait and 844×390 landscape; (5) `node --check` passes on every JS/MJS file.
 
@@ -241,7 +259,7 @@ Product QA bar as checkable statements: (1) the first stage's intro line and the
 
 - Only Welcome Mat is playable; the rest of the journey, challenges, practice, daily, endless, tutorial, decor hub, themes, achievements and the save document are data/code without UI.
 - Tutorial lesson `t5` in `content.js` places Pip on the Easel (`SP.` row, x = 1) while giving him a snack wish, so its scripted serve is impossible; the lesson is not reachable from the UI.
-- No pause, settings, volume, mute, captions toggle or undo in the UI; audio starts at fixed bus levels on Play.
+- No pause, volume, mute, captions toggle or undo in the UI (Settings has only the Graphics section); audio starts at fixed bus levels on Play.
 - Floor and station cells are disabled buttons; moving is by direction only, so a player cannot tap a destination cell.
 - The header label "Clubhouse Day 1" is static and the results screen has no par, star or best-score comparison.
 - English only; no locale switch.
@@ -253,7 +271,7 @@ Product QA bar as checkable statements: (1) the first stage's intro line and the
 - Mode select exposing journey progression (stars, par turns), challenges, practice presets, daily seed, endless Open Club and the five tutorial lessons; persistence of progress through `CCStore`.
 - Fix lesson `t5` (move Pip to the Snack Counter cell or give him a paint wish).
 - Tap-to-move on floor cells with path preview, and undo where `cfg.mechanics.undo` allows.
-- Settings sheet: per-bus volume, mute, captions on the status line, high-contrast palette (`colorHC` values exist in `content.js`), large text.
+- Settings dialog sections beyond Graphics: per-bus volume, mute, captions on the status line, high-contrast palette (`colorHC` values exist in `content.js`), large text.
 - Localization string table for the nine required locales with runtime selection from `navigator.languages`.
 - StarHermit adapter: identity/presence, daily leaderboard with the existing tie-break, achievement unlocks for the ten declared keys, cloud save of the checksummed document.
 - Optional Three.js presentation via `js/render3d.js` behind a capability check, with the DOM board kept as the always-available mirror.
