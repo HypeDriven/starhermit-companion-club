@@ -275,3 +275,7 @@ Product QA bar as checkable statements: (1) the first stage's intro line and the
 - Localization string table for the nine required locales with runtime selection from `navigator.languages`.
 - StarHermit adapter: identity/presence, daily leaderboard with the existing tie-break, achievement unlocks for the ten declared keys, cloud save of the checksummed document.
 - Optional Three.js presentation via `js/render3d.js` behind a capability check, with the DOM board kept as the always-available mirror.
+
+## Browser interference
+
+`browser-guard.js` (loaded from `index.html`) suppresses browser UI that gets in the way of play: the right-click context menu, the iOS long-press callout, copy / cut / paste, and page text selection. Text fields (inputs, textareas, selects, contenteditable) keep normal selection, context menu and clipboard behaviour.
