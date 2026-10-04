@@ -149,6 +149,7 @@
       if (k === 'render_scale') Fx.set(k, e.target.value / 100);
       else if (k === 'adaptive' || k === 'show_fps') Fx.set(k, e.target.checked);
       else Fx.set(k, e.target.value);
+      if (window.CCPlatform && window.CCPlatform.hosted) window.CCPlatform.patchSettings({ graphics: Fx.info().saved });
       refresh();
     });
     panel.querySelector('#gfx-scale').addEventListener('input', function (e) {

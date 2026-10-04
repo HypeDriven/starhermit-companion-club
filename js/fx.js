@@ -234,6 +234,13 @@
     persist();
     apply();
   }
+  /** Replace the whole saved graphics object (platform settings sync). */
+  function replace(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    saved = JSON.parse(JSON.stringify(obj));
+    persist();
+    apply();
+  }
   function info() {
     var k = canvas ? null : Math.min(window.devicePixelRatio || 1, r.cap);
     return {
@@ -249,7 +256,7 @@
   if (rmQuery && rmQuery.addEventListener) rmQuery.addEventListener('change', apply);
 
   window.CCFx = {
-    KEY: KEY, set: set, info: info, burst: burst, setReducedMotion: setReducedMotion,
+    KEY: KEY, set: set, replace: replace, info: info, burst: burst, setReducedMotion: setReducedMotion,
     onChange: function (fn) { listeners.push(fn); }
   };
   apply();

@@ -13,39 +13,86 @@ function settingsButton() { return Settings ? Settings.buttonHtml() : ''; }
 function bindSettings() { var b = document.getElementById('cc-settings-open'); if (b && Settings) b.addEventListener('click', Settings.open); }
 function hex(n) { return '#' + ('00000' + (n >>> 0).toString(16)).slice(-6); }
 
-// ---- platform handshake: token, cloud save (remote wins), account line ----
+// ---- platform strings (title account line, sign-in, invite) ----
+var PT = {
+  'en-US': { offline: 'Offline — progress is stored on this device.', playing: 'Playing as {name}', synced: 'progress synced', saving: 'saving…', nosync: 'cloud sync unavailable', signIn: 'Sign in with StarHermit', invite: 'Invite a friend', copied: 'Invite link copied to the clipboard.', copyFail: 'Could not copy — invite link: {link}' },
+  'en-GB': { offline: 'Offline — progress is stored on this device.', playing: 'Playing as {name}', synced: 'progress synced', saving: 'saving…', nosync: 'cloud sync unavailable', signIn: 'Sign in with StarHermit', invite: 'Invite a friend', copied: 'Invite link copied to the clipboard.', copyFail: 'Could not copy — invite link: {link}' },
+  'es-419': { offline: 'Sin conexión: el progreso se guarda en este dispositivo.', playing: 'Jugando como {name}', synced: 'progreso sincronizado', saving: 'guardando…', nosync: 'sincronización en la nube no disponible', signIn: 'Iniciar sesión con StarHermit', invite: 'Invitar a un amigo', copied: 'Enlace de invitación copiado al portapapeles.', copyFail: 'No se pudo copiar. Enlace de invitación: {link}' },
+  'es-ES': { offline: 'Sin conexión: el progreso se guarda en este dispositivo.', playing: 'Jugando como {name}', synced: 'progreso sincronizado', saving: 'guardando…', nosync: 'sincronización en la nube no disponible', signIn: 'Iniciar sesión con StarHermit', invite: 'Invitar a un amigo', copied: 'Enlace de invitación copiado al portapapeles.', copyFail: 'No se ha podido copiar. Enlace de invitación: {link}' },
+  'de-DE': { offline: 'Offline – der Fortschritt wird auf diesem Gerät gespeichert.', playing: 'Du spielst als {name}', synced: 'Fortschritt synchronisiert', saving: 'wird gespeichert…', nosync: 'Cloud-Synchronisierung nicht verfügbar', signIn: 'Mit StarHermit anmelden', invite: 'Freund einladen', copied: 'Einladungslink in die Zwischenablage kopiert.', copyFail: 'Kopieren fehlgeschlagen – Einladungslink: {link}' },
+  'fr-FR': { offline: 'Hors ligne : la progression est enregistrée sur cet appareil.', playing: 'Vous jouez en tant que {name}', synced: 'progression synchronisée', saving: 'enregistrement…', nosync: 'synchronisation cloud indisponible', signIn: 'Se connecter avec StarHermit', invite: 'Inviter un ami', copied: 'Lien d’invitation copié dans le presse-papiers.', copyFail: 'Copie impossible — lien d’invitation : {link}' },
+  'fr-CA': { offline: 'Hors ligne : la progression est enregistrée sur cet appareil.', playing: 'Vous jouez en tant que {name}', synced: 'progression synchronisée', saving: 'enregistrement…', nosync: 'synchronisation infonuagique non disponible', signIn: 'Se connecter avec StarHermit', invite: 'Inviter un ami', copied: 'Lien d’invitation copié dans le presse-papiers.', copyFail: 'Copie impossible — lien d’invitation : {link}' },
+  'pt-BR': { offline: 'Offline — o progresso fica salvo neste dispositivo.', playing: 'Jogando como {name}', synced: 'progresso sincronizado', saving: 'salvando…', nosync: 'sincronização na nuvem indisponível', signIn: 'Entrar com StarHermit', invite: 'Convidar um amigo', copied: 'Link de convite copiado para a área de transferência.', copyFail: 'Não foi possível copiar — link de convite: {link}' },
+  'it-IT': { offline: 'Offline: i progressi sono salvati su questo dispositivo.', playing: 'Giochi come {name}', synced: 'progressi sincronizzati', saving: 'salvataggio…', nosync: 'sincronizzazione cloud non disponibile', signIn: 'Accedi con StarHermit', invite: 'Invita un amico', copied: 'Link di invito copiato negli appunti.', copyFail: 'Impossibile copiare. Link di invito: {link}' }
+};
+var P = PT[(Settings && Settings.locale) || 'en-US'] || PT['en-US'];
+
+// ---- key bindings (platform overrides via StarHermit controls) ----
+var DEFAULT_KEYS = { up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'], serve: ['KeyS'], tidy: ['KeyT'], hint: ['KeyH'] };
+var keyAction = {};
+function setBindings(b) {
+  keyAction = {};
+  Object.keys(b).forEach(function (a) { (b[a] || []).forEach(function (code) { keyAction[code] = a; }); });
+}
+setBindings(DEFAULT_KEYS);
+
+// ---- platform handshake: token, cloud save (remote wins), settings, account line ----
 try { Platform.init(); } catch (e) { /* offline */ }
-if (Platform.hosted) {
+function syncFromPlatform() {
+  if (!Platform.hosted) return;
   try { Platform.fetchProfile().then(renderAccountLine).catch(function () {}); } catch (e) { /* ok */ }
-  try { Platform.onSync(renderAccountLine); } catch (e) { /* ok */ }
   Platform.loadCloud().then(function (remoteRaw) {
     var remote = remoteRaw ? Store.loadRaw(remoteRaw) : null;
-    if (remote) Store.save(remote); // local cache mirrors the remote doc
+    if (remote) { doc = remote; Store.save(remote); } // local cache mirrors the remote doc
     renderAccountLine();
   }).catch(function () {});
+  Platform.getSettings().then(function (s) {
+    if (s && s.graphics && Fx && Fx.replace) Fx.replace(s.graphics); // platform value wins
+  }).catch(function () {});
+  Platform.loadBindings(DEFAULT_KEYS).then(setBindings).catch(function () {});
 }
+try { Platform.onSync(renderAccountLine); } catch (e) { /* ok */ }
+try { Platform.onAuth(function () { if (!state) title(); else renderAccountLine(); syncFromPlatform(); }); } catch (e) { /* ok */ }
+syncFromPlatform();
 
 function accountLine() {
-  return '<p class="cc-account" id="cc-account" aria-live="polite"></p>';
+  var html = '<p class="cc-account" id="cc-account" aria-live="polite"></p>';
+  var btns = '';
+  if (Platform.canSignIn && Platform.canSignIn()) btns += '<button type="button" id="cc-signin" class="cc-secondary">' + P.signIn + '</button>';
+  if (Platform.hosted && Platform.inviteLink()) btns += '<button type="button" id="cc-invite" class="cc-secondary">' + P.invite + '</button>';
+  return html + (btns ? '<div class="cc-title-actions cc-platform-actions">' + btns + '</div>' : '');
 }
 function renderAccountLine() {
   var el = document.getElementById('cc-account');
   if (!el) return;
-  if (!Platform.hosted) {
-    el.textContent = 'Offline — progress is stored on this device.';
-    return;
-  }
+  if (!Platform.hosted) { el.textContent = P.offline; return; }
   var name = Platform.profile ? Platform.profile.name : '…';
-  var syncTxt = Platform.sync === 'synced' ? 'progress synced'
-    : Platform.sync === 'saving' ? 'saving…'
-    : 'cloud sync unavailable';
-  el.textContent = 'Playing as ' + name + ' · ' + syncTxt;
+  var syncTxt = Platform.sync === 'synced' ? P.synced : Platform.sync === 'saving' ? P.saving : P.nosync;
+  el.textContent = P.playing.replace('{name}', name) + ' · ' + syncTxt;
+}
+var toastTimer = null;
+function toast(text) {
+  var el = document.getElementById('cc-toast');
+  if (!el) { el = document.createElement('div'); el.id = 'cc-toast'; el.className = 'cc-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = text; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 4000);
+}
+function invite() {
+  var link = Platform.inviteLink();
+  if (!link) return;
+  var done = function () { toast(P.copied); }, fail = function () { toast(P.copyFail.replace('{link}', link)); };
+  try { navigator.clipboard.writeText(link).then(done, fail); } catch (e) { fail(); }
+}
+function bindPlatform() {
+  var si = document.getElementById('cc-signin'); if (si) si.addEventListener('click', function () { Platform.signIn(); });
+  var iv = document.getElementById('cc-invite'); if (iv) iv.addEventListener('click', invite);
 }
 
 function title() {
   root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p>' + accountLine() + '<div class="cc-title-actions"><button id="cc-play" type="button">Play</button>' + settingsButton() + '</div></section></main>';
   renderAccountLine();
   bindSettings();
+  bindPlatform();
   document.getElementById('cc-play').addEventListener('click', start);
 }
 function start() {
@@ -186,7 +233,7 @@ function render() {
   var again=document.getElementById('cc-again'); if(again){ again.addEventListener('click',start); again.focus(); }
   else if (focusSel) { var el = root.querySelector(focusSel); if (el) el.focus(); }
 }
-window.addEventListener('keydown', function(e){ if(!state||state.terminal||(Settings&&Settings.isOpen()))return; var d={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key]; if(d){e.preventDefault();move(d);} else if(e.key.toLowerCase()==='s')serve(); else if(e.key.toLowerCase()==='t')tidy(); else if(e.key.toLowerCase()==='h')hint(); });
+window.addEventListener('keydown', function(e){ if(!state||state.terminal||(Settings&&Settings.isOpen()))return; if(e.ctrlKey||e.metaKey||e.altKey)return; var a=keyAction[e.code]; if(!a)return; e.preventDefault(); if(a==='serve')serve(); else if(a==='tidy')tidy(); else if(a==='hint')hint(); else move(a); });
 document.addEventListener('visibilitychange', function(){ if(!Audio) return; if(document.hidden) Audio.suspend && Audio.suspend(); else Audio.resume && Audio.resume(); });
 title();
 })();

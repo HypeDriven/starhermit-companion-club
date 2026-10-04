@@ -71,6 +71,7 @@ async function runPass(tag, viewport, mobile) {
   });
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`[${tag}] pageerror: ${e.message}`));
+  page.on('request', (r) => { if (new URL(r.url()).pathname.startsWith('/api/')) errors.push(`[${tag}] standalone made an API call: ${r.url()}`); });
   page.on('console', (m) => {
     if ((m.type() === 'error' || m.type() === 'warning') && !browserNoise.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`);
   });
@@ -279,8 +280,65 @@ async function runPass(tag, viewport, mobile) {
   if (errors.length) throw new Error(`page errors in ${tag} pass:\n` + errors.join('\n'));
 }
 
+// StarHermit pass: a launch token in the fragment, API stubbed by page.route.
+async function platformPass(tag, viewport, mobile) {
+  const context = await browser.newContext({ viewport, hasTouch: mobile, isMobile: mobile });
+  const page = await context.newPage();
+  page.on('pageerror', (e) => errors.push(`[${tag}] pageerror: ${e.message}`));
+  page.on('console', (m) => {
+    if ((m.type() === 'error' || m.type() === 'warning') && !browserNoise.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`);
+  });
+  const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const jwt = `${b64u({ alg: 'none' })}.${b64u({ sub: 'u-e2e-0001', game_scope: 'companion-club', exp: Math.floor(Date.now() / 1000) + 3600 })}.sig`;
+  const seen = [];
+  await page.route('**/api/**', (route) => {
+    const req = route.request(), u = new URL(req.url());
+    seen.push(req.method() + ' ' + u.pathname);
+    const json = (o) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+    if (u.pathname.endsWith('/profile')) return json({ nickname: 'Pip Tester' });
+    if (u.pathname.endsWith('/settings') && req.method() === 'GET') return json({ settings: { graphics: { preset: 'high' } } });
+    if (u.pathname.endsWith('/settings')) return json({ settings: {} });
+    if (u.pathname.endsWith('/controls')) return json({ actions: [{ action: 'hint', codes: ['KeyJ'] }] });
+    if (u.pathname.includes('/cloud-saves/') && req.method() === 'PUT') return route.fulfill({ status: 204 });
+    return route.fulfill({ status: 204 });
+  });
+  const press = async (sel) => { if (mobile) await page.tap(sel); else await page.click(sel); };
+  const step = async (name, fn) => { await fn(); console.log(`ok - [${tag}] ${name}`); };
+  try {
+    await step('signed in: account line shows the nickname', async () => {
+      await page.goto(BASE + '/#game_token=' + jwt, { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => /Pip Tester/.test(document.getElementById('cc-account')?.textContent || ''), null, { timeout: 5000 });
+      if (await page.evaluate(() => location.hash)) throw new Error('launch fragment not stripped');
+      if (await page.locator('#cc-signin').count()) throw new Error('sign-in button shown while signed in');
+      if (!seen.some((s) => s === 'GET /api/v1/me/cloud-saves/' + encodeURIComponent('game:companion-club'))) throw new Error('no cloud-save load: ' + seen.join(', '));
+    });
+    await step('platform settings applied (graphics preset)', async () => {
+      await page.waitForFunction(() => document.documentElement.dataset.gfxPreset === 'high', null, { timeout: 3000 });
+    });
+    await step('invite a friend copies the link and confirms', async () => {
+      await page.locator('#cc-invite').scrollIntoViewIfNeeded();
+      await press('#cc-invite');
+      await page.waitForSelector('#cc-toast:not([hidden])', { timeout: 3000 });
+      const box = await page.locator('#cc-toast').boundingBox();
+      if (!box || box.x < 0 || box.x + box.width > viewport.width + 1) throw new Error('toast off-screen ' + JSON.stringify(box));
+      await page.screenshot({ path: SHOT('platform', tag) });
+    });
+    await step('platform key binding (hint on J) drives the game', async () => {
+      await press('#cc-play');
+      await page.waitForSelector('.cc-game');
+      await page.keyboard.press('j');
+      await page.waitForFunction(() => /^Hint:/.test(document.querySelector('.cc-message')?.textContent || ''), null, { timeout: 3000 });
+    });
+  } finally {
+    await context.close();
+  }
+  if (errors.length) throw new Error(`page errors in ${tag} pass:\n` + errors.join('\n'));
+}
+
 try {
   await runPass('desktop', { width: 1280, height: 800 }, false);
+  await platformPass('platform-desktop', { width: 1280, height: 800 }, false);
+  await platformPass('platform-mobile', { width: 390, height: 844 }, true);
   await runPass('mobile', { width: 390, height: 844 }, true);
 } catch (e) {
   failed = true;
