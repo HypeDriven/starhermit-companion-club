@@ -172,7 +172,7 @@
       }
       var a = 0.18 + 0.22 * (0.5 + 0.5 * Math.sin(t * 0.0012 + m.p * 3));
       ctx.fillStyle = 'rgba(255,221,170,' + (still ? 0.25 : a).toFixed(3) + ')';
-      ctx.beginPath(); ctx.arc(m.x * W, m.y * H, m.s * k, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(m.x * W, m.y * H, m.s * k * ((window.UIScale && window.UIScale.value) || 1), 0, 6.2832); ctx.fill();
     }
     // Bursts.
     for (var j = bursts.length - 1; j >= 0; j--) {
@@ -219,6 +219,9 @@
         rot: Math.random() * 6.28, spin: (Math.random() - 0.5) * 8
       };
       if (kind === 'tidy') p.vx *= 0.35;
+      // Particles live in viewport px; grow them with the zoomed UI on large screens.
+      var u = (window.UIScale && window.UIScale.value) || 1;
+      if (u !== 1) { p.vx *= u; p.vy *= u; p.g *= u; p.size *= u; }
       p.max = p.life;
       bursts.push(p);
     }

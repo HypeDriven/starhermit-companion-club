@@ -320,7 +320,7 @@ async function platformPass(tag, viewport, mobile) {
       await press('#cc-invite');
       await page.waitForSelector('#cc-toast:not([hidden])', { timeout: 3000 });
       const box = await page.locator('#cc-toast').boundingBox();
-      if (!box || box.x < 0 || box.x + box.width > viewport.width + 1) throw new Error('toast off-screen ' + JSON.stringify(box));
+      if (!box || box.x < 0 || box.x + box.width > (page.viewportSize() || viewport).width + 1) throw new Error('toast off-screen ' + JSON.stringify(box));
       await page.screenshot({ path: SHOT('platform', tag) });
     });
     await step('platform key binding (hint on J) drives the game', async () => {
