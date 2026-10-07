@@ -27,7 +27,8 @@
 | `js/main.js` | The application: title screen, one playable stage, board/HUD rendering, input, results overlay, sparkle bursts on serve/tidy/win. |
 | `js/render3d.js` | Three.js presentation module (procedural clubhouse, companions, stations, particles). Not referenced by `index.html`; not loaded. |
 | `vendor/three.module.min.js` | Three.js (2023 build) for `render3d.js`; not loaded by the page. |
-| `server.js` | Static file server for the distribution (`PORT` env, default 8000). Refuses `tests/`, `tools/`, `node_modules/` and dotfiles. |
+| `score-script.js` | StarHermit platform script (`server=`): range-checks a finished day's total and posts it to the `high-score` leaderboard (canonical copy in the games repo's `tools/score-script.js`). |
+| `server.js` | Local dev static file server (`PORT` env, default 8000). Refuses `tests/`, `tools/`, `node_modules/` and dotfiles. |
 | `tests/rules.test.mjs` | `npm test`: node:test unit tests for rules, content, RNG and store. |
 | `tests/gfx.test.mjs` | `npm test`: node:test unit tests for the graphics quality model. |
 | `tests/e2e.mjs` | `npm run test:e2e`: Playwright playthrough of the real UI on desktop and mobile viewports. |
@@ -223,7 +224,7 @@ Shipped language: English only (`<html lang="en">`), spelled as US English — e
 
 ## 12. StarHermit integration
 
-`starhermit.txt` declares `name`, `description`, `launch=index.html`, `owner`, `server=server.js`, `cover`, and one `control.<action>=<Code> | <Label>` line per keyboard action (`up`/`down`/`left`/`right` = arrow keys, `serve` = KeyS, `tidy` = KeyT, `hint` = KeyH). `server.js` is a plain static file server for the distribution; it implements no game script, so the game has no platform sessions, matchmaking, invites-to-session, chat, achievements, leaderboards or replays (the in-save achievements in §8 stay local).
+`starhermit.txt` declares `name`, `description`, `launch=index.html`, `owner`, `server=score-script.js`, `cover`, and one `control.<action>=<Code> | <Label>` line per keyboard action (`up`/`down`/`left`/`right` = arrow keys, `serve` = KeyS, `tidy` = KeyT, `hint` = KeyH). `score-script.js` is the platform script; it only accepts leaderboard results, so the game has no multiplayer sessions, matchmaking, invites-to-session, chat, platform achievements or replays (the in-save achievements in §8 stay local). `server.js` is the local dev static file server.
 
 The canonical client `starhermit-sdk.js` (an unmodified copy of `tools/starhermit-sdk.js`, loaded before `js/platform.js`) does all platform I/O; `js/platform.js` (`CCPlatform`) is a thin adapter over `window.StarHermit` that keeps the game's API:
 
@@ -233,9 +234,10 @@ The canonical client `starhermit-sdk.js` (an unmodified copy of `tools/starhermi
 - **Cloud save:** the checksummed save document (`CCStore.save`) is mirrored with `StarHermit.saveJSON` (2 s debounce) to `/api/v1/me/cloud-saves/game:<slug>`, flushed with keepalive on `pagehide` and when the page is hidden. On boot the remote copy wins (`loadJSON`, validated by `CCStore.loadRaw`) and replaces the in-memory and local copy; localStorage stays the offline cache.
 - **Settings KV:** the graphics settings object (preset, overrides, render scale, adaptive, fps readout) is written with `patchSettings({graphics})` whenever it changes in the Settings panel and applied from `getSettings()` on boot (platform value wins).
 - **Invite a friend:** when signed in the title screen shows "Invite a friend", which copies `StarHermit.inviteLink()` to the clipboard and confirms with a toast (or shows the link if copying is blocked).
+- **Leaderboard:** when signed in, every finished club day (won or lost) posts its total through `StarHermit.submitScores` (a practice session whose `score-script.js` posts it to the `high-score` board, integer, higher is better, 0–20,000), and the results card shows "Leaderboard rank: #N" (or "Score posted…" / "Score not posted…") above Play again. Standalone play posts nothing and shows no line.
 - **Controls:** keydown is routed by `event.code` through `StarHermit.loadBindings(defaults)`, so bindings changed on the platform apply in game. The game has no in-game key list or rebinding UI.
 
-All new strings (account line, sign-in, invite, toast) are localized in the nine supported locales, picked with the Settings panel's locale. Without a token the game makes zero `/api` calls and runs fully offline.
+All new strings (account line, sign-in, invite, toast, leaderboard line) are localized in the nine supported locales, picked with the Settings panel's locale. Without a token the game makes zero `/api` calls and runs fully offline.
 
 ## 13. Technical architecture
 
