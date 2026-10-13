@@ -939,7 +939,7 @@ export function createRenderer(opts) {
       }
     }
     applyCamera();
-    renderer.render(scene, camera);
+    (globalThis.GameOptions ? globalThis.GameOptions.draw(renderer, () => renderer.render(scene, camera)) : renderer.render(scene, camera));
   }
   function setRunning(on) {
     running = !!on;
