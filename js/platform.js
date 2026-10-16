@@ -19,7 +19,7 @@
   var hosted = false;
   var profile = null;          // { name } for the signed-in player
   var sync = 'offline';        // offline | saving | synced (cloud mirror)
-  var syncListeners = [], authListeners = [];
+  var syncListeners = [], authListeners = [], conflictListeners = [];
   var started = false;
 
   function sdk() { return SH || (SH = root.StarHermit || null); }
@@ -44,7 +44,8 @@
   function profileFor(pid) {
     var s = sdk();
     if (!s || !hosted || !pid) return Promise.resolve('player');
-    return s.profile(pid).then(function (p) { return p ? p.displayName : 'Player ' + String(pid).slice(0, 6); });
+    var tr = function (k, v) { return root.CCI18N ? root.CCI18N.T(k, v) : k.replace('{id}', v.id); };
+    return s.profile(pid).then(function (p) { return p ? p.displayName : tr('Player {id}', { id: String(pid).slice(0, 6) }); });
   }
   function fetchProfile() {
     var s = sdk();
@@ -104,6 +105,17 @@
       started = true;
       s.init();
       s.on('saved', function (ok) { if (hosted) setSync(ok ? 'synced' : 'offline'); });
+      // Another device saved since our last load: the SDK refused this write and
+      // blocks further ones until a reload. Reload the cloud copy and hand it to
+      // the game (onConflict) to merge and save again.
+      s.on('saveconflict', function () {
+        setSync('saving');
+        s.loadJSON().then(function (obj) {
+          if (s.saveConflicted()) { setSync('offline'); return; }
+          var raw = obj ? JSON.stringify(obj) : null;
+          conflictListeners.forEach(function (fn) { try { fn(raw); } catch (e) { /* ignore */ } });
+        });
+      });
       s.on('auth', function (a) {
         var was = hosted;
         hosted = !!(a && a.signedIn && s.slug);
@@ -149,6 +161,8 @@
     },
     onSync: function (fn) { if (typeof fn === 'function') syncListeners.push(fn); },
     onAuth: function (fn) { if (typeof fn === 'function') authListeners.push(fn); },
+    /** fn(remoteRaw|null) after a save conflict: the newer cloud copy, reloaded (writes allowed again). */
+    onConflict: function (fn) { if (typeof fn === 'function') conflictListeners.push(fn); },
     get hosted() { return hosted; },
     get profile() { return profile; },
     get sync() { return sync; },

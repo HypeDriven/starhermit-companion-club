@@ -119,8 +119,42 @@
     });
   }
 
+  // Cloud-save conflict (another device saved first): the better of both
+  // progress records so neither device loses anything — every lesson, the
+  // higher stars/best per stage, challenge and daily, every achievement at its
+  // earliest unlock, all owned decor, the larger sparkle and lifetime stats.
+  function mergeProgress(local, remote) {
+    var a = Object.assign(defaultProgress(), local || {});
+    var b = Object.assign(defaultProgress(), remote || {});
+    function maxMap(x, y) {
+      var out = Object.assign({}, y || {});
+      Object.keys(x || {}).forEach(function (k) { out[k] = Math.max(Number(x[k]) || 0, Number(out[k]) || 0); });
+      return out;
+    }
+    var achievements = Object.assign({}, b.achievements);
+    Object.keys(a.achievements).forEach(function (k) {
+      achievements[k] = achievements[k] ? Math.min(achievements[k], a.achievements[k]) : a.achievements[k];
+    });
+    var stats = Object.assign(defaultProgress().stats, b.stats);
+    Object.keys(a.stats || {}).forEach(function (k) { stats[k] = Math.max(Number(a.stats[k]) || 0, Number(stats[k]) || 0); });
+    return Object.assign({}, b, a, {
+      tutorialDone: Object.assign({}, b.tutorialDone, a.tutorialDone),
+      journeyStars: maxMap(a.journeyStars, b.journeyStars),
+      journeyBest: maxMap(a.journeyBest, b.journeyBest),
+      challengeBest: maxMap(a.challengeBest, b.challengeBest),
+      dailiesDone: maxMap(a.dailiesDone, b.dailiesDone),
+      endlessBest: Math.max(a.endlessBest || 0, b.endlessBest || 0),
+      achievements: achievements,
+      sparkle: Math.max(a.sparkle || 0, b.sparkle || 0),
+      sparkleEarned: Math.max(a.sparkleEarned || 0, b.sparkleEarned || 0),
+      decor: Object.assign({}, b.decor, a.decor),
+      stats: stats
+    });
+  }
+
   return {
     SAVE_VERSION: SAVE_VERSION,
+    mergeProgress: mergeProgress,
     DEFAULT_SETTINGS: DEFAULT_SETTINGS,
     load: load, save: save, fresh: fresh, migrate: migrate,
     checksum: checksum, loadRaw: loadRaw,

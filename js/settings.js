@@ -1,7 +1,7 @@
 /* Companion Club — Settings panel (Graphics section). The panel lives outside
  * #cc-root so re-renders of the game never touch it. Its own strings are
- * localized for the nine supported locales; the locale comes from
- * navigator.languages. Browser global: window.CCSettings.
+ * localized for the nine supported locales and follow the game language
+ * (js/i18n.js; relocalize() on a change). Browser global: window.CCSettings.
  */
 (function () {
   'use strict';
@@ -114,7 +114,12 @@
     }
     return 'en-US';
   }
-  var locale = pickLocale((navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).concat(['en-US']));
+  // The game language (js/i18n.js) wins; relocalize() follows later changes.
+  function currentLocale() {
+    if (window.CCI18N && window.CCI18N.lang) return pickLocale([window.CCI18N.lang]);
+    return pickLocale((navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).concat(['en-US']));
+  }
+  var locale = currentLocale();
   var T = STRINGS[locale];
   function fmt(s, tier) { return s.replace('{tier}', tier); }
 
@@ -127,19 +132,19 @@
     panel.className = 'cc-settings';
     panel.hidden = true;
     var cats = Object.keys(Gfx.CATEGORIES).map(function (cat) {
-      return '<label class="cc-set-row" for="gfx-' + cat + '"><span>' + esc(T.cats[cat]) + '</span><select id="gfx-' + cat + '" data-gfx="' + cat + '"></select></label>';
+      return '<label class="cc-set-row" for="gfx-' + cat + '"><span data-k="cats.' + cat + '">' + esc(T.cats[cat]) + '</span><select id="gfx-' + cat + '" data-gfx="' + cat + '"></select></label>';
     }).join('');
     panel.innerHTML =
       '<div class="cc-settings-card" role="dialog" aria-modal="true" aria-labelledby="cc-settings-title" lang="' + locale + '">' +
-      '<header><h2 id="cc-settings-title">' + esc(T.settings) + '</h2><button type="button" id="cc-settings-close">' + esc(T.close) + '</button></header>' +
-      '<section class="cc-settings-body" aria-labelledby="cc-gfx-title"><h3 id="cc-gfx-title">' + esc(T.graphics) + '</h3>' +
-      '<label class="cc-set-row" for="gfx-preset"><span>' + esc(T.quality) + '</span><select id="gfx-preset" data-gfx="preset"></select></label>' +
-      '<label class="cc-set-row" for="gfx-scale"><span>' + esc(T.renderScale) + ' <output id="gfx-scale-out" for="gfx-scale"></output></span><input type="range" id="gfx-scale" data-gfx="render_scale" min="50" max="200" step="10"></label>' +
+      '<header><h2 id="cc-settings-title" data-k="settings">' + esc(T.settings) + '</h2><button type="button" id="cc-settings-close" data-k="close">' + esc(T.close) + '</button></header>' +
+      '<section class="cc-settings-body" aria-labelledby="cc-gfx-title"><h3 id="cc-gfx-title" data-k="graphics">' + esc(T.graphics) + '</h3>' +
+      '<label class="cc-set-row" for="gfx-preset"><span data-k="quality">' + esc(T.quality) + '</span><select id="gfx-preset" data-gfx="preset"></select></label>' +
+      '<label class="cc-set-row" for="gfx-scale"><span><span data-k="renderScale">' + esc(T.renderScale) + '</span> <output id="gfx-scale-out" for="gfx-scale"></output></span><input type="range" id="gfx-scale" data-gfx="render_scale" min="50" max="200" step="10"></label>' +
       cats +
-      '<label class="cc-set-check" for="gfx-adaptive"><input type="checkbox" id="gfx-adaptive" data-gfx="adaptive"><span>' + esc(T.adaptive) + '</span></label>' +
-      '<label class="cc-set-check" for="gfx-fps"><input type="checkbox" id="gfx-fps" data-gfx="show_fps"><span>' + esc(T.showFps) + '</span></label>' +
+      '<label class="cc-set-check" for="gfx-adaptive"><input type="checkbox" id="gfx-adaptive" data-gfx="adaptive"><span data-k="adaptive">' + esc(T.adaptive) + '</span></label>' +
+      '<label class="cc-set-check" for="gfx-fps"><input type="checkbox" id="gfx-fps" data-gfx="show_fps"><span data-k="showFps">' + esc(T.showFps) + '</span></label>' +
       '<p class="cc-set-summary" id="gfx-summary" aria-live="polite"></p>' +
-      '<p class="cc-set-note" id="gfx-note" hidden>' + esc(T.note) + '</p>' +
+      '<p class="cc-set-note" id="gfx-note" hidden data-k="note">' + esc(T.note) + '</p>' +
       '</section></div>';
     document.body.appendChild(panel);
 
@@ -212,13 +217,27 @@
     if (el) el.focus();
   }
 
+  /** Re-label the panel (when built) in the current game language. */
+  function relocalize() {
+    locale = currentLocale();
+    T = STRINGS[locale];
+    window.CCSettings.locale = locale;
+    if (!panel) return;
+    panel.querySelector('.cc-settings-card').setAttribute('lang', locale);
+    panel.querySelectorAll('[data-k]').forEach(function (el) {
+      var v = el.getAttribute('data-k').split('.').reduce(function (o, k) { return o && o[k]; }, T);
+      if (typeof v === 'string') el.textContent = v;
+    });
+    refresh();
+  }
+
   /** Markup for the Settings button (title screen and in-game header). */
   function buttonHtml() {
     return '<button type="button" id="cc-settings-open" class="cc-gear" aria-label="' + esc(T.settings) + '"><span aria-hidden="true">⚙</span><span class="cc-gear-label">' + esc(T.settings) + '</span></button>';
   }
 
   window.CCSettings = {
-    open: open, close: close, buttonHtml: buttonHtml,
+    open: open, close: close, buttonHtml: buttonHtml, relocalize: relocalize,
     isOpen: function () { return !!(panel && !panel.hidden); },
     locale: locale, STRINGS: STRINGS, pickLocale: pickLocale
   };

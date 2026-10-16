@@ -7,6 +7,15 @@ var doc = Store.load();                 // persisted save document (offline cach
 var state = null, selected = null, startedAt = 0, message = '';
 var roundStreak = 0, roundRecorded = false;
 var root = document.getElementById('cc-root');
+// Localization (js/i18n.js, window.CCI18N): English source strings are the
+// keys; T() translates now, N() only marks a string for display-time T().
+function T(key, vars) {
+  if (window.CCI18N) return window.CCI18N.T(key, vars);
+  return String(key).replace(/\{(\w+)\}/g, function (m, k) { return vars && k in vars ? String(vars[k]) : m; });
+}
+function N(key) { return key; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function curLang() { return (window.CCI18N && window.CCI18N.lang) || (Settings && Settings.locale) || 'en-US'; }
 var Fx = window.CCFx, Settings = window.CCSettings;
 if (Fx && doc.settings && doc.settings.reducedMotion) Fx.setReducedMotion(true);
 function settingsButton() { return Settings ? Settings.buttonHtml() : ''; }
@@ -25,7 +34,7 @@ var PT = {
   'pt-BR': { offline: 'Offline — o progresso fica salvo neste dispositivo.', playing: 'Jogando como {name}', synced: 'progresso sincronizado', saving: 'salvando…', nosync: 'sincronização na nuvem indisponível', signIn: 'Entrar com StarHermit', invite: 'Convidar um amigo', copied: 'Link de convite copiado para a área de transferência.', copyFail: 'Não foi possível copiar — link de convite: {link}', lbPosting: 'Enviando a pontuação para o ranking…', lbRank: 'Posição no ranking: #{rank}', lbPosted: 'Pontuação enviada para o ranking.', lbFailed: 'Pontuação não enviada para o ranking.' },
   'it-IT': { offline: 'Offline: i progressi sono salvati su questo dispositivo.', playing: 'Giochi come {name}', synced: 'progressi sincronizzati', saving: 'salvataggio…', nosync: 'sincronizzazione cloud non disponibile', signIn: 'Accedi con StarHermit', invite: 'Invita un amico', copied: 'Link di invito copiato negli appunti.', copyFail: 'Impossibile copiare. Link di invito: {link}', lbPosting: 'Invio del punteggio alla classifica…', lbRank: 'Posizione in classifica: #{rank}', lbPosted: 'Punteggio inviato alla classifica.', lbFailed: 'Punteggio non inviato alla classifica.' }
 };
-var P = PT[(Settings && Settings.locale) || 'en-US'] || PT['en-US'];
+var P = PT[curLang()] || PT['en-US']; // follows the game language (re-picked on a change)
 
 // ---- key bindings (platform overrides via StarHermit controls) ----
 var DEFAULT_KEYS = { up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'], serve: ['KeyS'], tidy: ['KeyT'], hint: ['KeyH'] };
@@ -52,6 +61,15 @@ function syncFromPlatform() {
   Platform.loadBindings(DEFAULT_KEYS).then(setBindings).catch(function () {});
 }
 try { Platform.onSync(renderAccountLine); } catch (e) { /* ok */ }
+// Save conflict: merge the newer cloud progress into this device's and save
+// the merge (CCStore.mergeProgress keeps the better of both).
+try {
+  Platform.onConflict(function (raw) {
+    var remote = raw ? Store.loadRaw(raw) : null;
+    if (remote) doc.progress = Store.mergeProgress(doc.progress, remote.progress);
+    Store.save(doc);
+  });
+} catch (e) { /* ok */ }
 try { Platform.onAuth(function () { if (!state) title(); else renderAccountLine(); syncFromPlatform(); }); } catch (e) { /* ok */ }
 syncFromPlatform();
 
@@ -89,7 +107,7 @@ function bindPlatform() {
 }
 
 function title() {
-  root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>Guide clubhouse friends, serve their wishes, and keep every station tidy.</p>' + accountLine() + '<div class="cc-title-actions"><button id="cc-play" type="button">Play</button>' + settingsButton() + '</div></section></main>';
+  root.innerHTML = '<main class="cc-title"><img class="cc-title-art" src="./assets/key-art.webp" alt="" onerror="this.remove()"><section><h1>Companion Club</h1><p>' + esc(T('Guide clubhouse friends, serve their wishes, and keep every station tidy.')) + '</p>' + accountLine() + '<div class="cc-title-actions"><button id="cc-play" type="button">' + esc(T('Play')) + '</button>' + settingsButton() + '</div></section></main>';
   renderAccountLine();
   bindSettings();
   bindPlatform();
@@ -99,17 +117,37 @@ function start() {
   if (Audio) { Audio.start(); Audio.play('ui'); }
   state = Rules.createGame(Content.JOURNEY[0]); selected = state.companions[0]?.id || null; startedAt = performance.now();
   roundStreak = 0; roundRecorded = false; lbLine = null;
-  message = state.cfg.intro || 'Choose a friend and guide them toward the station matching their wish.'; render();
+  var intro = state.cfg.intro;
+  message = function () { return intro ? T(intro) : T('Choose a friend and guide them toward the station matching their wish.'); }; render();
 }
 function companion(id) { return state.companions.find(function (c) { return c.id === id; }); }
 function companionName(id) { return Content.COMPANIONS[id]?.label || id; }
-function activityName(id) { return Content.ACTIVITIES[id]?.label || id || 'rest'; }
+function activityName(id) { return Content.ACTIVITIES[id] ? T(Content.ACTIVITIES[id].label) : id || T('rest'); }
+// Rule refusals and event types in the player's language.
+var REASONS = {
+  'game-ended': N('The club day is over.'), 'unknown-command': N('Unknown action.'), 'malformed-command': N('That action was not understood.'),
+  'unknown-companion': N('That friend is not in the club.'), 'bad-direction': N('That is not a direction.'),
+  'out-of-bounds': N('That would leave the clubhouse.'), 'blocked-cell': N('Furniture blocks the way.'),
+  'occupied-cell': N('Another friend is standing there.'), 'no-active-wish': N('This friend has no wish right now.'),
+  'wrong-station': N('This station does not match the wish.'), 'station-messy': N('Tidy this station first.'),
+  'not-on-station': N('Stand on a station to serve.'), 'station-not-messy': N('That station is already tidy.'),
+  'station-not-reachable': N('That station is out of reach.')
+};
+var EVENTS = {
+  move: N('move'), serve: N('serve'), tidy: N('tidy'), messy: N('messy'), round: N('round'),
+  win: N('win'), lose: N('lose'), 'wish-expired': N('wish expired'), 'wish-new': N('wish new')
+};
 function command(cmd) {
   cmd.atMs = performance.now() - startedAt;
   var out = Rules.applyCommand(state, cmd);
-  if (!out.ok) { message = String(out.reason || 'That action is unavailable.').replace(/-/g, ' '); Audio && Audio.play && Audio.play('invalid'); render(); return; }
+  if (!out.ok) {
+    var reason = out.reason;
+    message = function () { return REASONS[reason] ? T(REASONS[reason]) : reason ? String(reason).replace(/-/g, ' ') : T('That action is unavailable.'); };
+    Audio && Audio.play && Audio.play('invalid'); render(); return;
+  }
   state = out.state;
-  message = out.events.length ? out.events.map(function (e) { return e.type.replace(/-/g, ' '); }).join(' · ') : 'Turn complete';
+  var types = out.events.map(function (e) { return e.type; });
+  message = function () { return types.length ? types.map(function (t) { return EVENTS[t] ? T(EVENTS[t]) : t.replace(/-/g, ' '); }).join(' · ') : T('Turn complete'); };
   if (Audio && Audio.play) {
     out.events.forEach(function (e) {
       Audio.play(e.type);
@@ -166,20 +204,27 @@ function recordRound() {
   if (st.serves >= 100) grant('serves-100');
   if (p.sparkleEarned >= 5000) grant('sparkle-5000');
   Store.save(doc);
-  if (unlocked.length) message = 'Achievement unlocked: ' + unlocked.join(', ');
+  if (unlocked.length) message = function () { return T('Achievement unlocked: {names}', { names: unlocked.map(function (n) { return T(n); }).join(', ') }); };
 }
-function choose(id) { selected = id; message = companionName(id) + ' selected.'; Audio && Audio.play && Audio.play('select'); render(); }
+function choose(id) { selected = id; message = function () { return T('{name} selected.', { name: companionName(id) }); }; Audio && Audio.play && Audio.play('select'); render(); }
 function move(dir) { if (selected) command({ type: 'move', companion: selected, dir: dir }); }
 function serve() { if (selected) command({ type: 'serve', companion: selected }); }
 function tidy() {
   var c = companion(selected), station = c && state.stations.find(function (s) { return s.messy && Math.abs(s.x-c.x)+Math.abs(s.y-c.y)<=1; });
-  if (!station) { message = 'No messy station is within reach.'; render(); return; }
+  if (!station) { message = function () { return T('No messy station is within reach.'); }; render(); return; }
   command({ type: 'tidy', companion: selected, x: station.x, y: station.y });
 }
 function hint() {
   var h = Rules.hint(state);
-  if (!h) { message = 'No legal action is available.'; render(); return; }
-  var a = h.action; message = 'Hint: ' + a.type + (a.dir ? ' ' + a.dir : '') + ' with ' + companionName(a.companion) + '.'; selected = a.companion; Audio && Audio.play && Audio.play('hint'); render();
+  if (!h) { message = function () { return T('No legal action is available.'); }; render(); return; }
+  var a = h.action;
+  var DIRS = { up: N('up'), down: N('down'), left: N('left'), right: N('right') };
+  var ACTS = { move: N('move'), serve: N('serve'), tidy: N('tidy') };
+  message = function () {
+    var what = (ACTS[a.type] ? T(ACTS[a.type]) : a.type) + (a.dir ? ' ' + (DIRS[a.dir] ? T(DIRS[a.dir]) : a.dir) : '');
+    return T('Hint: {action} with {name}.', { action: what, name: companionName(a.companion) });
+  };
+  selected = a.companion; Audio && Audio.play && Audio.play('hint'); render();
 }
 function renderBoard() {
   var html = '';
@@ -189,45 +234,45 @@ function renderBoard() {
     var blocked=state.grid[y][x]==='#';
     var text=c ? (Content.COMPANIONS[c.id]?.icon || '●') : s ? (Content.ACTIVITIES[s.activity]?.icon || '◆') : blocked ? '▦' : '·';
     // A station keeps its identity (and messy badge) while a companion stands on it.
-    var stationLabel = s ? activityName(s.activity)+(s.messy?', messy':'') : '';
-    var label=c ? companionName(c.id)+(s?' at '+stationLabel:'') : s ? stationLabel : blocked?'Wall':'Open floor';
+    var stationLabel = s ? (s.messy ? T('{activity}, messy', { activity: activityName(s.activity) }) : activityName(s.activity)) : '';
+    var label=c ? (s ? T('{name} at {station}', { name: companionName(c.id), station: stationLabel }) : companionName(c.id)) : s ? stationLabel : blocked?T('Wall'):T('Open floor');
     var badge = s && c ? '<i class="cc-station-badge'+(s.messy?' messy':'')+'" aria-hidden="true">'+(Content.ACTIVITIES[s.activity]?.icon || '◆')+(s.messy?'!':'')+'</i>' : '';
     var tint = c ? Content.COMPANIONS[c.id]?.color : s ? Content.ACTIVITIES[s.activity]?.color : null;
-    html += '<button type="button"'+(tint!=null?' style="--tint:'+hex(tint)+(s?';--station-tint:'+hex(Content.ACTIVITIES[s.activity]?.color||0)+'"':'"'):'')+' class="cc-cell '+(c?'friend ':'')+(s?'station ':'')+(s&&s.messy?'messy ':'')+(blocked?'blocked ':'')+(c&&c.id===selected?'selected':'')+'" '+(c?'data-friend="'+c.id+'"':'disabled')+' aria-label="Row '+(y+1)+', column '+(x+1)+': '+label+'">'+badge+'<b aria-hidden="true">'+text+'</b><span>'+label+'</span></button>';
+    html += '<button type="button"'+(tint!=null?' style="--tint:'+hex(tint)+(s?';--station-tint:'+hex(Content.ACTIVITIES[s.activity]?.color||0)+'"':'"'):'')+' class="cc-cell '+(c?'friend ':'')+(s?'station ':'')+(s&&s.messy?'messy ':'')+(blocked?'blocked ':'')+(c&&c.id===selected?'selected':'')+'" '+(c?'data-friend="'+c.id+'"':'disabled')+' aria-label="'+esc(T('Row {row}, column {col}: {label}', { row: y+1, col: x+1, label: label }))+'">'+badge+'<b aria-hidden="true">'+text+'</b><span>'+label+'</span></button>';
   }
   return html;
 }
 function renderFriends() {
-  return state.companions.map(function (c) { return '<button type="button" style="--tint:'+hex(Content.COMPANIONS[c.id]?.color||0)+'" class="cc-friend '+(c.id===selected?'selected':'')+'" data-friend="'+c.id+'"><b>'+companionName(c.id)+'</b><span>Wants '+activityName(c.wish?.activity)+' · '+(c.wish?.patience ?? '—')+' patience</span></button>'; }).join('');
+  return state.companions.map(function (c) { return '<button type="button" style="--tint:'+hex(Content.COMPANIONS[c.id]?.color||0)+'" class="cc-friend '+(c.id===selected?'selected':'')+'" data-friend="'+c.id+'"><b>'+companionName(c.id)+'</b><span>'+esc(T('Wants {activity} · {n} patience', { activity: activityName(c.wish?.activity), n: c.wish?.patience ?? '—' }))+'</span></button>'; }).join('');
 }
 // Hosted play only: post the finished day's total to the platform high-score
 // board and show the player's rank on the results card (lbLine; null = hidden).
-var lbLine = null;
+var lbLine = null;  // null (hidden) | function returning the line in the current language
 function postToLeaderboard(total) {
   if (!Platform.hosted) { lbLine = null; return; }
-  lbLine = P.lbPosting;
+  lbLine = function () { return P.lbPosting; };
   Platform.submitScore(total).then(function (r) {
-    lbLine = !r.posted ? P.lbFailed : r.rank ? P.lbRank.replace('{rank}', r.rank) : P.lbPosted;
+    lbLine = function () { return !r.posted ? P.lbFailed : r.rank ? P.lbRank.replace('{rank}', r.rank) : P.lbPosted; };
     var el = document.getElementById('cc-result-lb');
-    if (el) el.textContent = lbLine;
+    if (el) el.textContent = lbLine();
   });
 }
 function resultHtml() {
   var t = state.terminal, s = state.score;
   var why = {
-    'goal-complete': 'Every wish on the club list was fulfilled in time.',
-    'harmony-lost': 'Too many wishes expired and the club’s harmony broke.',
-    'day-ended': 'The day ended before the club goal was met.',
-    'no-actions': 'No legal actions remained.',
-    'resigned': 'The club day was given up early.'
-  }[t.reason] || '';
+    'goal-complete': N('Every wish on the club list was fulfilled in time.'),
+    'harmony-lost': N('Too many wishes expired and the club’s harmony broke.'),
+    'day-ended': N('The day ended before the club goal was met.'),
+    'no-actions': N('No legal actions remained.'),
+    'resigned': N('The club day was given up early.')
+  }[t.reason];
   var parts = [
-    ['Serving', s.serve], ['Patience bonus', s.patienceBonus], ['Together bonus', s.togetherBonus],
-    ['Streak bonus', s.streakBonus], ['Tidying', s.tidy], ['Wave bonus', s.roundBonus],
-    ['Day bonus', s.dayBonus], ['Mood bonus', s.moodBonus]
+    [N('Serving'), s.serve], [N('Patience bonus'), s.patienceBonus], [N('Together bonus'), s.togetherBonus],
+    [N('Streak bonus'), s.streakBonus], [N('Tidying'), s.tidy], [N('Wave bonus'), s.roundBonus],
+    [N('Day bonus'), s.dayBonus], [N('Mood bonus'), s.moodBonus]
   ].filter(function (p) { return p[1]; });
-  var rows = parts.map(function (p) { return '<tr><td>'+p[0]+'</td><td>'+p[1]+'</td></tr>'; }).join('');
-  return '<section class="cc-result" role="dialog" aria-modal="true" aria-labelledby="cc-result-title"><div class="cc-result-card"><img class="cc-result-art" src="./assets/results-art.webp" alt="" onerror="this.remove()"><h2 id="cc-result-title">'+(t.won?'Club day complete!':'Club day ended')+'</h2><p>'+why+'</p><table class="cc-score"><tbody>'+rows+'<tr class="cc-score-total"><td>Total</td><td>'+s.total+'</td></tr></tbody></table>'+(lbLine!=null?'<p id="cc-result-lb" class="cc-result-lb" aria-live="polite">'+lbLine+'</p>':'')+'<button id="cc-again">Play again</button></div></section>';
+  var rows = parts.map(function (p) { return '<tr><td>'+esc(T(p[0]))+'</td><td>'+p[1]+'</td></tr>'; }).join('');
+  return '<section class="cc-result" role="dialog" aria-modal="true" aria-labelledby="cc-result-title"><div class="cc-result-card"><img class="cc-result-art" src="./assets/results-art.webp" alt="" onerror="this.remove()"><h2 id="cc-result-title">'+esc(t.won?T('Club day complete!'):T('Club day ended'))+'</h2><p>'+(why?esc(T(why)):'')+'</p><table class="cc-score"><tbody>'+rows+'<tr class="cc-score-total"><td>'+esc(T('Total'))+'</td><td>'+s.total+'</td></tr></tbody></table>'+(lbLine!=null?'<p id="cc-result-lb" class="cc-result-lb" aria-live="polite">'+esc(lbLine())+'</p>':'')+'<button id="cc-again">'+esc(T('Play again'))+'</button></div></section>';
 }
 function render() {
   var active = document.activeElement;
@@ -237,7 +282,10 @@ function render() {
       : active.dataset && active.dataset.dir ? '[data-dir="' + active.dataset.dir + '"]'
       : null)
     : null;
-  root.innerHTML = '<main class="cc-game"><header><div><h1>Companion Club</h1><p>Clubhouse Day 1</p></div><div>Served <b>'+state.fulfilled+'/'+state.cfg.goal+'</b> · Turns <b>'+state.tick+'</b> · Score <b>'+state.score.total+'</b></div>'+settingsButton()+'</header><section class="cc-layout"><aside><h2>Friends</h2><div class="cc-friends">'+renderFriends()+'</div><p class="cc-message" role="status">'+message+'</p><div class="cc-pad"><button data-dir="up">↑</button><button data-dir="left">←</button><button data-dir="down">↓</button><button data-dir="right">→</button></div><div class="cc-actions"><button id="cc-serve">Serve wish</button><button id="cc-tidy">Tidy</button><button id="cc-hint">Hint</button></div></aside><section class="cc-board-wrap"><h2>Clubhouse floor</h2><div class="cc-board-fit"><div class="cc-board" style="--cols:'+state.cfg.board.cols+';--rows:'+state.cfg.board.rows+'">'+renderBoard()+'</div></div></section></section>'+(state.terminal?resultHtml():'')+'</main>';
+  var msg = typeof message === 'function' ? message() : message;
+  var stats = T('Served {served} · Turns {turns} · Score {score}', { served: '\u0001' + state.fulfilled + '/' + state.cfg.goal + '\u0002', turns: '\u0001' + state.tick + '\u0002', score: '\u0001' + state.score.total + '\u0002' });
+  stats = esc(stats).replace(/\u0001/g, '<b>').replace(/\u0002/g, '</b>');
+  root.innerHTML = '<main class="cc-game"><header><div><h1>Companion Club</h1><p>'+esc(T('Clubhouse Day {n}', { n: 1 }))+'</p></div><div>'+stats+'</div>'+settingsButton()+'</header><section class="cc-layout"><aside><h2>'+esc(T('Friends'))+'</h2><div class="cc-friends">'+renderFriends()+'</div><p class="cc-message" role="status">'+esc(msg)+'</p><div class="cc-pad"><button data-dir="up" aria-label="'+esc(T('Move up'))+'">↑</button><button data-dir="left" aria-label="'+esc(T('Move left'))+'">←</button><button data-dir="down" aria-label="'+esc(T('Move down'))+'">↓</button><button data-dir="right" aria-label="'+esc(T('Move right'))+'">→</button></div><div class="cc-actions"><button id="cc-serve">'+esc(T('Serve wish'))+'</button><button id="cc-tidy">'+esc(T('Tidy'))+'</button><button id="cc-hint">'+esc(T('Hint'))+'</button></div></aside><section class="cc-board-wrap"><h2>'+esc(T('Clubhouse floor'))+'</h2><div class="cc-board-fit"><div class="cc-board" style="--cols:'+state.cfg.board.cols+';--rows:'+state.cfg.board.rows+'">'+renderBoard()+'</div></div></section></section>'+(state.terminal?resultHtml():'')+'</main>';
   root.querySelectorAll('[data-friend]').forEach(function (b) { b.addEventListener('click', function () { choose(b.dataset.friend); }); });
   root.querySelectorAll('[data-dir]').forEach(function (b) { b.addEventListener('click', function () { move(b.dataset.dir); }); });
   document.getElementById('cc-serve').addEventListener('click', serve); document.getElementById('cc-tidy').addEventListener('click', tidy); document.getElementById('cc-hint').addEventListener('click', hint);
@@ -247,5 +295,14 @@ function render() {
 }
 window.addEventListener('keydown', function(e){ if(!state||state.terminal||(Settings&&Settings.isOpen()))return; if(e.ctrlKey||e.metaKey||e.altKey)return; var a=keyAction[e.code]; if(!a)return; e.preventDefault(); if(a==='serve')serve(); else if(a==='tidy')tidy(); else if(a==='hint')hint(); else move(a); });
 document.addEventListener('visibilitychange', function(){ if(!Audio) return; if(document.hidden) Audio.suspend && Audio.suspend(); else Audio.resume && Audio.resume(); });
+// Game language changed (Settings → Language, or the account preference
+// arrived): re-render the visible screen in the new language. The round state
+// is untouched (render() only redraws from it).
+document.addEventListener('cc-language', function () {
+  P = PT[curLang()] || PT['en-US'];
+  if (Settings && Settings.relocalize) Settings.relocalize();
+  if (state) render(); else title();
+});
+
 title();
 })();

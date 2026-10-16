@@ -26,6 +26,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { stubStarHermit, launchToken } from './starhermit-e2e.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const SHOT = (stage, tag) => `/tmp/companion-club-e2e-${stage}-${tag}.png`;
@@ -183,7 +184,7 @@ async function runPass(tag, viewport, mobile) {
       if (mobile) await page.tap('#cc-serve');
       else await page.click('#cc-serve');
       const msg = await page.locator('.cc-message').textContent();
-      if (!/not on station/i.test(msg || '')) throw new Error('no invalid-action feedback: ' + msg);
+      if (!/Stand on a station to serve/i.test(msg || '')) throw new Error('no invalid-action feedback: ' + msg);
       console.log(`  invalid feedback: ${msg}`);
     });
 
@@ -335,11 +336,79 @@ async function platformPass(tag, viewport, mobile) {
   if (errors.length) throw new Error(`page errors in ${tag} pass:\n` + errors.join('\n'));
 }
 
+// Signed in against a stubbed StarHermit API whose account prefers fr-CA:
+// Automatic resolves to Canadian French; switching to Italian from Settings
+// mid-round re-renders the game screen and the panel in place without touching
+// the round, syncs ui.language, and Report a problem posts a bug report.
+async function languagePass(tag, viewport, mobile) {
+  const context = await browser.newContext({ viewport, hasTouch: mobile, isMobile: mobile });
+  const page = await context.newPage();
+  page.on('pageerror', (e) => errors.push(`[${tag}] pageerror: ${e.message}`));
+  page.on('console', (m) => {
+    if ((m.type() === 'error' || m.type() === 'warning') && !browserNoise.test(m.text())) errors.push(`[${tag}] console: ${m.text()}`);
+  });
+  const press = async (sel) => { if (mobile) await page.tap(sel); else await page.click(sel); };
+  try {
+    const calls = await stubStarHermit(page, { preferredLanguage: 'fr-CA' });
+    await page.goto('about:blank');
+    await page.goto(BASE + '/index.html#game_token=' + launchToken(), { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.lang === 'fr-CA' && document.getElementById('cc-play')?.textContent === 'Jouer', null, { timeout: 10000 });
+    await press('#cc-play');
+    await page.waitForSelector('.cc-game .cc-board');
+    await page.waitForFunction(() => document.querySelector('.cc-message').textContent.startsWith('Guidez un compagnon'));
+    await press('#cc-hint');
+    const header = () => page.locator('.cc-game header div').last().textContent();
+    const before = await header();
+    await press('#cc-settings-open');
+    await page.waitForSelector('#gfx-preset', { state: 'visible' });
+    if ((await page.textContent('#cc-settings-title')) !== 'Paramètres') throw new Error('settings not French');
+    const choice = page.locator('[data-game-language="choice"]');
+    await choice.waitFor({ state: 'attached', timeout: 5000 });
+    if ((await choice.count()) !== 1) throw new Error('expected exactly one language selector');
+    await choice.scrollIntoViewIfNeeded();
+    const auto = await choice.locator('option').first().textContent();
+    if (auto !== 'Automatique — Français (Canada)') throw new Error('Automatic label not resolved: ' + auto);
+    await choice.selectOption('it-IT');
+    await page.waitForFunction(() => document.documentElement.lang === 'it-IT'
+      && document.getElementById('cc-settings-title').textContent === 'Impostazioni'
+      && document.getElementById('cc-gfx-title').textContent === 'Grafica'
+      && document.getElementById('cc-serve').textContent === 'Esaudisci desiderio'
+      && document.querySelector('.cc-message').textContent.startsWith('Suggerimento:'));
+    await page.waitForFunction(() => /Salvato/.test(document.querySelector('[data-game-language="status"]')?.textContent || ''));
+    if (calls.settings['ui.language']?.choice !== 'it-IT') throw new Error('ui.language not saved: ' + JSON.stringify(calls.settings));
+    const report = page.locator('[data-game-report="title"]');
+    await report.scrollIntoViewIfNeeded();
+    await report.fill('Test report');
+    await press('[data-game-report="send"]');
+    await page.waitForFunction(() => /Grazie/.test(document.querySelector('[data-game-report="status"]').textContent));
+    if (!calls.reports?.[0] || calls.reports[0].kind !== 'bug') throw new Error('report not posted');
+    const spill = await page.evaluate(() => {
+      const w = document.documentElement.clientWidth;
+      return [...document.querySelectorAll('.cc-settings select, .cc-settings input, .cc-settings button, .cc-settings textarea')]
+        .filter((n) => n.offsetParent && n.getBoundingClientRect().right > w + 1).map((n) => n.outerHTML.slice(0, 60));
+    });
+    if (spill.length) throw new Error('settings controls cut off: ' + spill.join(','));
+    await page.screenshot({ path: SHOT('language', tag) });
+    await choice.selectOption('auto');
+    await page.waitForFunction(() => document.documentElement.lang === 'fr-CA' && document.getElementById('cc-settings-title').textContent === 'Paramètres');
+    await page.locator('#cc-settings-close').scrollIntoViewIfNeeded();
+    await press('#cc-settings-close');
+    await page.waitForSelector('.cc-settings', { state: 'hidden' });
+    if ((await header()) !== before) throw new Error(`round changed during the language switch: ${before} → ${await header()}`);
+    console.log(`ok - [${tag}] Language: Automatic follows the StarHermit preference; live switch mid-round; ui.language; report a problem`);
+  } finally {
+    await context.close();
+  }
+  if (errors.length) throw new Error(`page errors in ${tag} pass:\n` + errors.join('\n'));
+}
+
 try {
   await runPass('desktop', { width: 1280, height: 800 }, false);
   await platformPass('platform-desktop', { width: 1280, height: 800 }, false);
   await platformPass('platform-mobile', { width: 390, height: 844 }, true);
   await runPass('mobile', { width: 390, height: 844 }, true);
+  await languagePass('language-desktop', { width: 1280, height: 800 }, false);
+  await languagePass('language-mobile', { width: 390, height: 844 }, true);
 } catch (e) {
   failed = true;
   console.error('E2E FAIL:', e.message || e);
@@ -352,4 +421,4 @@ if (failed || errors.length) {
   if (!failed && errors.length) console.error('E2E FAIL — page errors:\n' + errors.join('\n'));
   process.exit(1);
 }
-console.log('\nE2E PASS — companion-club playable end-to-end on desktop and mobile, no page errors');
+console.log('\nE2E PASS — companion-club playable end-to-end on desktop and mobile, language/report step included, no page errors');
