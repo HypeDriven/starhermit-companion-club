@@ -117,6 +117,7 @@ async function runPass(tag, viewport, mobile) {
       await expectAttr('data-gfx-particles', 'off');
       const sum = await page.locator('#gfx-summary').textContent();
       if (/particles/.test(sum) || !/shadows medium/.test(sum) || !/\d+×\d+ px/.test(sum)) throw new Error('summary after override: ' + sum);
+      if (!/ · Level 0 · /.test(sum)) throw new Error('summary lacks the hardware level: ' + sum);
       await page.check('#gfx-fps');
       await page.waitForSelector('#cc-fps');
       await page.screenshot({ path: SHOT('settings', tag) });

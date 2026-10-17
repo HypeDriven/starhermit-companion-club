@@ -38,16 +38,61 @@
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
 
-  /** Best preset for this GPU from the unmasked renderer string. */
-  function detectPreset(gpu, opts) {
-    var g = String(gpu || '').toLowerCase();
-    var tier;
-    if (!g || /swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic/.test(g)) tier = 'low';
-    else if (/nvidia|geforce|rtx|gtx|quadro|radeon rx|radeon pro|amd radeon(?!.*graphics)|apple m\d/.test(g)) tier = 'high';
-    else tier = 'balanced';
-    // Touch/mobile devices never auto-pick above Balanced.
-    if (opts && opts.mobile && (tier === 'high' || tier === 'ultra')) tier = 'balanced';
-    return tier;
+  // Auto picks the preset from the StarHermit hardware level (0 = Galaxy S20 / Intel UHD or weaker, 20 = RTX
+  // 5090; js/gpu-level.js → window.StarHermitGpu): Low from 0, Balanced from 4, High from 10, Ultra from 17.
+  // Phones, tablets and ≤ 4 GB machines are capped at level 9 (Balanced); software renderers and a failed
+  // probe (no GPU name) are level 0.
+  var PRESET_LEVELS = { low: 0, balanced: 4, high: 10, ultra: 17 };
+  function gpuApi() { return (typeof self !== 'undefined' ? self : globalThis).StarHermitGpu; }
+
+  /** Hardware level (0–20) for an unmasked renderer string plus StarHermitGpu.detectSystem() facts. */
+  function detectLevel(gpu, system) {
+    var G = gpuApi();
+    if (!String(gpu || '')) return 0;
+    if (!G) return PRESET_LEVELS.balanced;
+    return G.detectLevel(Object.assign({}, system || {}, { gpu: String(gpu) }));
+  }
+  /** The preset Auto starts from for a hardware level. */
+  function presetForLevel(level) {
+    var G = gpuApi();
+    if (G) return G.presetForLevel(level, PRESET_LEVELS);
+    return level >= 17 ? 'ultra' : level >= 10 ? 'high' : level >= 4 ? 'balanced' : 'low';
+  }
+  /** Best preset for a GPU (the hardware level already caps phones/tablets at Balanced). */
+  function detectPreset(gpu, system) { return presetForLevel(detectLevel(gpu, system)); }
+
+  /** Scale a count tuned at the preset's floor level up for faster GPUs (≤ 4×, never below the floor). */
+  function scaleCount(n, preset, level) {
+    var G = gpuApi();
+    var floor = PRESET_LEVELS[preset] || 0;
+    return G ? G.scaleBudget(n, Math.max(Number(level) || 0, floor), floor) : n;
+  }
+
+  /*
+   * Per-preset effect budget for the DOM board and its 2D effects canvas. Each preset is tuned to hold
+   * 60 FPS on the weakest GPU Auto gives it (Low → level 0, Balanced → 4, High → 10, Ultra → 17; measured
+   * with tests/gfx-bench.mjs).
+   *   canvasCap  effects-canvas pixel-ratio cap (with the preset's render scale on top);
+   *   motes      dust motes at the floor level (the Particles tier caps them: off 0, low 40);
+   *   burst      serve/tidy/win sparkle count multiplier at the floor level (win: 110 × burst);
+   *   lampRes    the hearth-light gradient is cached once per resize in an offscreen layer at this fraction
+   *              of the canvas and only blitted with a flickering alpha each frame.
+   */
+  var BUDGETS = {
+    low:      { canvasCap: 1,    motes: 12, burst: 0.4, lampRes: 0.25 },
+    balanced: { canvasCap: 1.25, motes: 22, burst: 0.5, lampRes: 0.25 },
+    high:     { canvasCap: 1.5,  motes: 56, burst: 1,   lampRes: 0.5 },
+    ultra:    { canvasCap: 2,    motes: 90, burst: 1.5, lampRes: 0.5 }
+  };
+  var MOTE_CAP = { off: 0, low: 40, high: 240 };
+  var BURST_CAP = { off: 0, low: 0.5, high: 4 };
+
+  /** A preset's concrete budget for a hardware level and Particles tier. */
+  function budgetFor(preset, level, particles) {
+    var b = Object.assign({}, BUDGETS[preset] || BUDGETS.balanced);
+    b.motes = Math.min(MOTE_CAP[particles] == null ? MOTE_CAP.high : MOTE_CAP[particles], Math.round(scaleCount(b.motes, preset, level)));
+    b.burst = Math.min(BURST_CAP[particles] == null ? BURST_CAP.high : BURST_CAP[particles], Math.round(scaleCount(b.burst, preset, level) * 100) / 100);
+    return b;
   }
 
   /**
@@ -55,7 +100,7 @@
    * saved: { preset: 'auto'|preset, render_scale (0.5–2), adaptive, show_fps,
    *          <category>: 'preset'|tier }.
    */
-  function resolve(saved, detected) {
+  function resolve(saved, detected, level) {
     var s = saved || {};
     var auto = PRESETS.indexOf(s.preset) < 0;
     var preset = auto ? (PRESETS.indexOf(detected) >= 0 ? detected : 'balanced') : s.preset;
@@ -67,7 +112,10 @@
     });
     out.adaptive = s.adaptive !== false;
     out.showFps = !!s.show_fps;
-    out.motes = MOTES[out.particles];
+    out.level = level == null ? PRESET_LEVELS[preset] : level;
+    out.budget = budgetFor(preset, out.level, out.particles);
+    out.motes = out.budget.motes;
+    out.cap = Math.min(out.cap, out.budget.canvasCap);
     // The effects canvas exists only when something draws on it; otherwise
     // the page costs exactly what the plain DOM board costs.
     out.canvas = out.particles !== 'off' || (out.ambient === 'animated' && out.bloom === 'on');
@@ -122,6 +170,8 @@
 
   return {
     PRESETS: PRESETS, CATEGORIES: CATEGORIES, MOTES: MOTES,
+    PRESET_LEVELS: PRESET_LEVELS, BUDGETS: BUDGETS, MOTE_CAP: MOTE_CAP, BURST_CAP: BURST_CAP,
+    detectLevel: detectLevel, presetForLevel: presetForLevel, budgetFor: budgetFor,
     detectPreset: detectPreset, resolve: resolve, choosePreset: choosePreset,
     presetTier: presetTier, pixelRatio: pixelRatio, describe: describe, adaptStep: adaptStep
   };

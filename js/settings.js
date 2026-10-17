@@ -15,7 +15,7 @@
       cats: { shadows: 'Shadows', bloom: 'Glow', grade: 'Color grade', particles: 'Particles', ambient: 'Ambient motion', detail: 'Surface detail' },
       tiers: { off: 'Off', low: 'Low', medium: 'Medium', high: 'High', on: 'On', static: 'Static', animated: 'Animated', plain: 'Plain', detailed: 'Detailed' },
       adaptive: 'Adaptive resolution', showFps: 'Show frame rate',
-      note: 'The effects layer is unavailable; the game draws without it.', unknownGpu: 'Unknown GPU',
+      note: 'The effects layer is unavailable; the game draws without it.', unknownGpu: 'Unknown GPU', level: 'Level {n}',
       sum: { shadows: 'shadows', bloom: 'glow', grade: 'color grade', particles: 'particles', ambient: 'ambient motion', detail: 'detailed surfaces', none: 'no effects', tiers: { low: 'low', medium: 'medium', high: 'high' } }
     },
     'en-GB': {
@@ -25,7 +25,7 @@
       cats: { shadows: 'Shadows', bloom: 'Glow', grade: 'Colour grade', particles: 'Particles', ambient: 'Ambient motion', detail: 'Surface detail' },
       tiers: { off: 'Off', low: 'Low', medium: 'Medium', high: 'High', on: 'On', static: 'Static', animated: 'Animated', plain: 'Plain', detailed: 'Detailed' },
       adaptive: 'Adaptive resolution', showFps: 'Show frame rate',
-      note: 'The effects layer is unavailable; the game draws without it.', unknownGpu: 'Unknown GPU',
+      note: 'The effects layer is unavailable; the game draws without it.', unknownGpu: 'Unknown GPU', level: 'Level {n}',
       sum: { shadows: 'shadows', bloom: 'glow', grade: 'colour grade', particles: 'particles', ambient: 'ambient motion', detail: 'detailed surfaces', none: 'no effects', tiers: { low: 'low', medium: 'medium', high: 'high' } }
     },
     'es-419': {
@@ -35,7 +35,7 @@
       cats: { shadows: 'Sombras', bloom: 'Resplandor', grade: 'Corrección de color', particles: 'Partículas', ambient: 'Movimiento ambiental', detail: 'Detalle de superficies' },
       tiers: { off: 'Desactivado', low: 'Bajo', medium: 'Medio', high: 'Alto', on: 'Activado', static: 'Estático', animated: 'Animado', plain: 'Simple', detailed: 'Detallado' },
       adaptive: 'Resolución adaptable', showFps: 'Mostrar cuadros por segundo',
-      note: 'La capa de efectos no está disponible; el juego se dibuja sin ella.', unknownGpu: 'GPU desconocida',
+      note: 'La capa de efectos no está disponible; el juego se dibuja sin ella.', unknownGpu: 'GPU desconocida', level: 'Nivel {n}',
       sum: { shadows: 'sombras', bloom: 'resplandor', grade: 'corrección de color', particles: 'partículas', ambient: 'movimiento ambiental', detail: 'superficies detalladas', none: 'sin efectos', tiers: { low: 'bajas', medium: 'medias', high: 'altas' } }
     },
     'es-ES': {
@@ -45,7 +45,7 @@
       cats: { shadows: 'Sombras', bloom: 'Resplandor', grade: 'Gradación de color', particles: 'Partículas', ambient: 'Movimiento ambiental', detail: 'Detalle de superficies' },
       tiers: { off: 'Desactivado', low: 'Bajo', medium: 'Medio', high: 'Alto', on: 'Activado', static: 'Estático', animated: 'Animado', plain: 'Sencillo', detailed: 'Detallado' },
       adaptive: 'Resolución adaptativa', showFps: 'Mostrar fotogramas por segundo',
-      note: 'La capa de efectos no está disponible; el juego se dibuja sin ella.', unknownGpu: 'GPU desconocida',
+      note: 'La capa de efectos no está disponible; el juego se dibuja sin ella.', unknownGpu: 'GPU desconocida', level: 'Nivel {n}',
       sum: { shadows: 'sombras', bloom: 'resplandor', grade: 'gradación de color', particles: 'partículas', ambient: 'movimiento ambiental', detail: 'superficies detalladas', none: 'sin efectos', tiers: { low: 'bajas', medium: 'medias', high: 'altas' } }
     },
     'de-DE': {
@@ -55,7 +55,7 @@
       cats: { shadows: 'Schatten', bloom: 'Leuchten', grade: 'Farbkorrektur', particles: 'Partikel', ambient: 'Umgebungsbewegung', detail: 'Oberflächendetails' },
       tiers: { off: 'Aus', low: 'Niedrig', medium: 'Mittel', high: 'Hoch', on: 'An', static: 'Statisch', animated: 'Animiert', plain: 'Schlicht', detailed: 'Detailliert' },
       adaptive: 'Adaptive Auflösung', showFps: 'Bildrate anzeigen',
-      note: 'Die Effektebene ist nicht verfügbar; das Spiel wird ohne sie dargestellt.', unknownGpu: 'Unbekannte GPU',
+      note: 'Die Effektebene ist nicht verfügbar; das Spiel wird ohne sie dargestellt.', unknownGpu: 'Unbekannte GPU', level: 'Stufe {n}',
       sum: { shadows: 'Schatten', bloom: 'Leuchten', grade: 'Farbkorrektur', particles: 'Partikel', ambient: 'Umgebungsbewegung', detail: 'detaillierte Oberflächen', none: 'keine Effekte', tiers: { low: 'niedrig', medium: 'mittel', high: 'hoch' } }
     },
     'fr-FR': {
@@ -65,7 +65,7 @@
       cats: { shadows: 'Ombres', bloom: 'Lueur', grade: 'Étalonnage des couleurs', particles: 'Particules', ambient: 'Mouvement d’ambiance', detail: 'Détail des surfaces' },
       tiers: { off: 'Désactivé', low: 'Faible', medium: 'Moyen', high: 'Élevé', on: 'Activé', static: 'Statique', animated: 'Animé', plain: 'Simple', detailed: 'Détaillé' },
       adaptive: 'Résolution adaptative', showFps: 'Afficher la fréquence d’images',
-      note: 'La couche d’effets est indisponible ; le jeu s’affiche sans elle.', unknownGpu: 'GPU inconnu',
+      note: 'La couche d’effets est indisponible ; le jeu s’affiche sans elle.', unknownGpu: 'GPU inconnu', level: 'Niveau {n}',
       sum: { shadows: 'ombres', bloom: 'lueur', grade: 'étalonnage', particles: 'particules', ambient: 'mouvement d’ambiance', detail: 'surfaces détaillées', none: 'aucun effet', tiers: { low: 'faibles', medium: 'moyennes', high: 'élevées' } }
     },
     'fr-CA': {
@@ -75,7 +75,7 @@
       cats: { shadows: 'Ombres', bloom: 'Lueur', grade: 'Colorimétrie', particles: 'Particules', ambient: 'Mouvement d’ambiance', detail: 'Détail des surfaces' },
       tiers: { off: 'Désactivé', low: 'Faible', medium: 'Moyen', high: 'Élevé', on: 'Activé', static: 'Statique', animated: 'Animé', plain: 'Simple', detailed: 'Détaillé' },
       adaptive: 'Résolution adaptative', showFps: 'Afficher le nombre d’images par seconde',
-      note: 'La couche d’effets n’est pas disponible; le jeu s’affiche sans elle.', unknownGpu: 'GPU inconnu',
+      note: 'La couche d’effets n’est pas disponible; le jeu s’affiche sans elle.', unknownGpu: 'GPU inconnu', level: 'Niveau {n}',
       sum: { shadows: 'ombres', bloom: 'lueur', grade: 'colorimétrie', particles: 'particules', ambient: 'mouvement d’ambiance', detail: 'surfaces détaillées', none: 'aucun effet', tiers: { low: 'faibles', medium: 'moyennes', high: 'élevées' } }
     },
     'pt-BR': {
@@ -85,7 +85,7 @@
       cats: { shadows: 'Sombras', bloom: 'Brilho', grade: 'Correção de cor', particles: 'Partículas', ambient: 'Movimento ambiente', detail: 'Detalhe das superfícies' },
       tiers: { off: 'Desligado', low: 'Baixo', medium: 'Médio', high: 'Alto', on: 'Ligado', static: 'Estático', animated: 'Animado', plain: 'Simples', detailed: 'Detalhado' },
       adaptive: 'Resolução adaptável', showFps: 'Mostrar taxa de quadros',
-      note: 'A camada de efeitos está indisponível; o jogo é desenhado sem ela.', unknownGpu: 'GPU desconhecida',
+      note: 'A camada de efeitos está indisponível; o jogo é desenhado sem ela.', unknownGpu: 'GPU desconhecida', level: 'Nível {n}',
       sum: { shadows: 'sombras', bloom: 'brilho', grade: 'correção de cor', particles: 'partículas', ambient: 'movimento ambiente', detail: 'superfícies detalhadas', none: 'sem efeitos', tiers: { low: 'baixas', medium: 'médias', high: 'altas' } }
     },
     'it-IT': {
@@ -95,7 +95,7 @@
       cats: { shadows: 'Ombre', bloom: 'Bagliore', grade: 'Correzione colore', particles: 'Particelle', ambient: 'Movimento ambientale', detail: 'Dettaglio superfici' },
       tiers: { off: 'Disattivato', low: 'Basso', medium: 'Medio', high: 'Alto', on: 'Attivato', static: 'Statico', animated: 'Animato', plain: 'Semplice', detailed: 'Dettagliato' },
       adaptive: 'Risoluzione adattiva', showFps: 'Mostra frequenza fotogrammi',
-      note: 'Il livello degli effetti non è disponibile; il gioco viene disegnato senza.', unknownGpu: 'GPU sconosciuta',
+      note: 'Il livello degli effetti non è disponibile; il gioco viene disegnato senza.', unknownGpu: 'GPU sconosciuta', level: 'Livello {n}',
       sum: { shadows: 'ombre', bloom: 'bagliore', grade: 'correzione colore', particles: 'particelle', ambient: 'movimento ambientale', detail: 'superfici dettagliate', none: 'nessun effetto', tiers: { low: 'basse', medium: 'medie', high: 'alte' } }
     }
   };
@@ -197,7 +197,7 @@
   }
   function summary() {
     var inf = Fx.info();
-    panel.querySelector('#gfx-summary').textContent = (inf.gpu || T.unknownGpu) + ' · ' + Gfx.describe(inf.resolved, inf.pixels, T.sum);
+    panel.querySelector('#gfx-summary').textContent = (inf.gpu || T.unknownGpu) + ' · ' + T.level.replace('{n}', inf.level) + ' · ' + Gfx.describe(inf.resolved, inf.pixels, T.sum);
     panel.querySelector('#gfx-note').hidden = !inf.unavailable;
   }
 

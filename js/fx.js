@@ -13,8 +13,19 @@
 
   var saved = load();
   var mobile = isMobile();
+  var gl2 = false;
   var gpuName = detectGpu();
-  var detected = Gfx.detectPreset(gpuName, { mobile: mobile });
+  // StarHermit hardware level → Auto preset (software = level 0 → Low; phones cap at Balanced). The shared
+  // detectSystem() gets no document here: its own WebGL probe would accept a software fallback (and Chrome
+  // warns about that), so the WebGL facts come from the caveat-checked probe below.
+  var level = (function () {
+    var G = window.StarHermitGpu;
+    var sys = G ? G.detectSystem({ navigator: navigator, screen: window.screen, matchMedia: window.matchMedia && window.matchMedia.bind(window) }) : { mobile: mobile };
+    sys.webgl = !!gpuName && gpuName !== 'Software renderer';
+    sys.webgl2 = gl2;
+    return Gfx.detectLevel(gpuName, sys);
+  })();
+  var detected = Gfx.presetForLevel(level);
   var r = null;                    // resolved settings
   var adaptiveScale = 1;
   var canvas = null, ctx = null, unavailable = false;
@@ -40,7 +51,9 @@
   function detectGpu() {
     try {
       var c = document.createElement('canvas');
-      var gl = c.getContext('webgl', { failIfMajorPerformanceCaveat: true });
+      var gl = c.getContext('webgl2', { failIfMajorPerformanceCaveat: true });
+      gl2 = !!gl;
+      if (!gl) gl = document.createElement('canvas').getContext('webgl', { failIfMajorPerformanceCaveat: true });
       if (!gl) return 'Software renderer';
       var name = '';
       if (!/Firefox/i.test(navigator.userAgent || '')) {
@@ -58,7 +71,7 @@
 
   // ---------- apply ----------
   function apply() {
-    r = Gfx.resolve(saved, detected);
+    r = Gfx.resolve(saved, detected, level);
     html.dataset.gfxPreset = r.preset;
     Object.keys(Gfx.CATEGORIES).forEach(function (cat) {
       html.dataset['gfx' + cat.charAt(0).toUpperCase() + cat.slice(1)] = r[cat];
@@ -90,7 +103,26 @@
   }
   function removeCanvas() {
     if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
-    canvas = null; ctx = null; bursts = [];
+    canvas = null; ctx = null; bursts = []; lamp = null;
+  }
+
+  // Hearth light: a static radial gradient, cached in a small offscreen layer (budget.lampRes of the canvas)
+  // and blitted with a flickering alpha, instead of a full-canvas gradient fill every frame.
+  var lamp = null;
+  function lampLayer(W, H) {
+    var k = r.budget.lampRes;
+    var lw = Math.max(1, Math.round(W * k)), lh = Math.max(1, Math.round(H * k));
+    if (lamp && lamp.width === lw && lamp.height === lh) return lamp;
+    lamp = document.createElement('canvas');
+    lamp.width = lw; lamp.height = lh;
+    var c = lamp.getContext('2d');
+    var g = c.createRadialGradient(lw * 0.86, -lh * 0.05, 0, lw * 0.86, -lh * 0.05, Math.max(lw, lh) * 0.75);
+    // Baked at the flicker's peak (×1.2); drawFrame scales it down with globalAlpha (which cannot exceed 1).
+    g.addColorStop(0, 'rgba(255,190,110,0.132)');
+    g.addColorStop(0.5, 'rgba(255,160,80,0.048)');
+    g.addColorStop(1, 'rgba(255,150,70,0)');
+    c.fillStyle = g; c.fillRect(0, 0, lw, lh);
+    return lamp;
   }
   function ratio() { return Gfx.pixelRatio(r, window.devicePixelRatio || 1, r.adaptive ? adaptiveScale : 1); }
   function resize() {
@@ -156,12 +188,9 @@
     // Lamp light from the upper right, flickering gently like a hearth.
     if (r.bloom === 'on' && r.ambient === 'animated') {
       var fl = still ? 0 : Math.sin(t * 0.0021) * 0.35 + Math.sin(t * 0.0053 + 1.3) * 0.25 + Math.sin(t * 0.011) * 0.12;
-      var rad = Math.max(W, H) * 0.75;
-      var g = ctx.createRadialGradient(W * 0.86, -H * 0.05, 0, W * 0.86, -H * 0.05, rad);
-      g.addColorStop(0, 'rgba(255,190,110,' + (0.11 + fl * 0.03).toFixed(3) + ')');
-      g.addColorStop(0.5, 'rgba(255,160,80,' + (0.04 + fl * 0.012).toFixed(3) + ')');
-      g.addColorStop(1, 'rgba(255,150,70,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = (1 + fl * 0.27) / 1.2; // ±0.03 on the 0.11 core, as the per-frame gradient had
+      ctx.drawImage(lampLayer(W, H), 0, 0, W, H);
+      ctx.globalAlpha = 1;
     }
     // Dust motes drifting through the light.
     for (var i = 0; i < motes.length; i++) {
@@ -200,9 +229,8 @@
   /** Sparkles at a viewport rect: kind = serve | tidy | win. */
   function burst(rect, kind) {
     if (!canvas || reduced() || !rect) return;
-    var many = r.particles === 'high';
     var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-    var n = kind === 'win' ? (many ? 110 : 50) : (many ? 26 : 12);
+    var n = Math.round((kind === 'win' ? 110 : 26) * r.budget.burst); // per-preset budget (Particles tier caps it)
     var colors = kind === 'serve' ? ['#ffd27a', '#f6b85f', '#fff1c9']
       : kind === 'tidy' ? ['#dff2ff', '#bfe3ff', '#ffffff']
       : ['#e07b39', '#f0d9a8', '#6fa8dc', '#5d9c59', '#8e6fc0', '#f6b85f', '#d9534f'];
@@ -247,7 +275,7 @@
   function info() {
     var k = canvas ? null : Math.min(window.devicePixelRatio || 1, r.cap);
     return {
-      gpu: gpuName, detected: detected, saved: saved, resolved: r, unavailable: unavailable,
+      gpu: gpuName, level: level, detected: detected, saved: saved, resolved: r, unavailable: unavailable,
       adaptiveScale: adaptiveScale,
       pixels: canvas ? [canvas.width, canvas.height] : [Math.round(window.innerWidth * k), Math.round(window.innerHeight * k)]
     };
