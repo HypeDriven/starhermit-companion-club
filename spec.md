@@ -5,14 +5,14 @@
 **Genre:** turn-based routing / errand puzzle with a caretaking fantasy.
 **Players:** 1, local, offline after load.
 **Session length:** one club day of Welcome Mat lasts 7–30 turns, about one to three minutes.
-**Platforms:** a StarHermit engine script game (engine 1.16.3, host API 1.18): played natively by the StarHermit client and in desktop and mobile browsers by the engine's web runtime, portrait and landscape.
+**Platforms:** a StarHermit engine script game (engine 1.16.4, host API 1.18): played natively by the StarHermit client and in desktop and mobile browsers by the engine's web runtime, portrait and landscape.
 **Rendering:** `starhermit:ui` (immediate-mode UI, styles converted from the old CSS) and `starhermit:draw`. The clubhouse floor is a grid of game-drawn `ui.widget` cells; the effects layer (lamp light, dust motes, sparkles) is drawn last from a 0 × 0 placed widget (section 8, Graphics). There is no 3D scene.
 
 ## 1. File map
 
 | Path | Role |
 |---|---|
-| `starhermit.txt` | Manifest: `launch=index.html`, `engine.api=1`, `engine.entry=native/main.ts`, `engine.version=1.16.3`, `engine.minor=18`, capabilities `platform,storage,clipboard`, the eight actions with keys and gamepad defaults, `server=score-script.js`. |
+| `starhermit.txt` | Manifest: `launch=index.html`, `engine.api=1`, `engine.entry=native/main.ts`, `engine.version=1.16.4`, `engine.minor=18`, capabilities `platform,storage,clipboard`, the eight actions with keys and gamepad defaults, `server=score-script.js`. |
 | `index.html`, `starhermit-files.json` | The engine's web loader and file index, written by `npm run package` (`starhermit package --web .`); never edited by hand. |
 | `native/main.ts` | Entry module: app state, Play, commands (move / serve / tidy / hint / next friend), messages, sounds, sparkles, recording the day and achievements, leaderboard post, input actions, lifecycle, fixed-step clock. |
 | `native/screens.ts` | Title, club day (header, Friends panel, floor panel), results dialog, toast; layouts per window size. |
