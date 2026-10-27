@@ -1,0 +1,51 @@
+# The title, Settings (the runtime's Options), and the club day's controls
+# by pointer and keys: choosing friends (their buttons, their board cells and
+# F), the direction pad, Serve, Tidy and Hint with the refusals they explain.
+until 300 =Play
+frames 10
+expect Offline — progress is stored on this device.
+click =Settings
+until 120 Accessibility
+frames 20
+key F1 2
+frames 30
+key Escape 2
+frames 30
+until 60 =Play
+frames 10
+click =Play
+until 60 Clubhouse floor
+frames 10
+expect Wants Paint · 11 patience
+click =Momo
+frames 5
+until 30 Momo selected.
+frames 5
+click Move right
+frames 5
+until 30 That would leave the clubhouse.
+frames 5
+click =Tidy
+frames 5
+until 30 No messy station is within reach.
+key KeyF 1
+frames 5
+until 30 Pip selected.
+frames 5
+click =Row 3, column 4: Momo
+frames 5
+until 30 Momo selected.
+frames 5
+click =Serve wish
+frames 5
+until 30 Stand on a station to serve.
+frames 5
+click =Hint
+frames 5
+until 30 Hint: move down with
+frames 5
+click Move down
+frames 5
+until 30 Served 0/3 · Turns 1
+frames 30
+save screens-game

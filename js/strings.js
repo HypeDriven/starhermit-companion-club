@@ -10,7 +10,7 @@
     // ---- title
     ['Guide clubhouse friends, serve their wishes, and keep every station tidy.', 'Guía a los amigos del club, cumple sus deseos y mantén ordenada cada estación.', 'Lenke die Freunde im Clubhaus, erfülle ihre Wünsche und halte jede Station ordentlich.', 'Guidez les amis du club, exaucez leurs souhaits et gardez chaque poste bien rangé.', 'Guie os amigos do clube, realize os desejos deles e mantenha cada estação arrumada.', 'Guida gli amici del club, esaudisci i loro desideri e tieni in ordine ogni postazione.'],
     ['Play', 'Jugar', 'Spielen', 'Jouer', 'Jogar', 'Gioca'],
-    ['Player {id}', 'Jugador {id}', 'Spieler {id}', 'Joueur {id}', 'Jogador {id}', 'Giocatore {id}'],
+    ['Settings', 'Configuración', 'Einstellungen', 'Paramètres', 'Configurações', 'Impostazioni'],
     // ---- game screen
     ['Clubhouse Day {n}', 'Día {n} en el club', 'Clubhaus-Tag {n}', 'Journée {n} au club', 'Dia {n} no clube', 'Giorno {n} al club'],
     ['Served {served} · Turns {turns} · Score {score}', 'Servidos {served} · Turnos {turns} · Puntos {score}', 'Erfüllt {served} · Züge {turns} · Punkte {score}', 'Servis {served} · Tours {turns} · Score {score}', 'Servidos {served} · Turnos {turns} · Pontos {score}', 'Serviti {served} · Turni {turns} · Punti {score}'],
@@ -131,6 +131,7 @@
 
   T['es-ES'] = {
     'Snack': 'Merienda',
+    'Settings': 'Ajustes',
     'Stand on a station to serve.': 'Ponte en una estación para cumplir el deseo.',
     'The club day is over.': 'El día en el club ha terminado.',
     'Club day ended': 'Ha terminado el día en el club',

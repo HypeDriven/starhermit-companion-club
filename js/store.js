@@ -1,11 +1,24 @@
-/* Companion Club — persistence: versioned, checksummed local save document.
- * Never stores credentials or tokens. Browser global: window.CCStore.
+/* Companion Club — the save model, pure: the engine client (native/platform.ts)
+ * keeps the save in the runtime's save (starhermit:storage `saves`, on the
+ * device and in the player's cloud slot); the Node tests run this file as is.
+ *
+ * - The engine save: { v: 1, progress } (docFromSave) — lifetime stats,
+ *   sparkle, achievements and the rest of the progress record.
+ * - mergeProgress: two devices' progress after a cloud conflict — the
+ *   better of both.
+ * - fromBrowserSave: the browser build's cloud save (the JS SDK's save.json:
+ *   the checksummed { sum, payload } text of { v, settings, progress }) → the
+ *   engine save. Its settings (volumes, graphics tier, reduced motion…) are
+ *   the runtime's Options now and are not carried over.
+ * - load/save/boards: the browser build's localStorage document and local
+ *   board, kept for the Node tests of the old format.
+ * Never stores credentials or tokens. Classic script / CommonJS: global CCStore.
  */
 (function (root, factory) {
-  var api = factory(root);
+  var api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.CCStore = api;
-})(typeof self !== 'undefined' ? self : this, function (root) {
+})(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
   var SAVE_VERSION = 1;
@@ -93,8 +106,27 @@
     var wrapped = JSON.stringify({ sum: checksum(payload), payload: payload });
     memoryFallback = wrapped;
     try { localStorage.setItem(KEY, wrapped); } catch (e) { /* memory fallback keeps session */ }
-    if (root.CCPlatform && typeof root.CCPlatform.onLocalSave === 'function')
-      root.CCPlatform.onLocalSave(wrapped); // host adapter mirrors to the cloud slot
+    return wrapped;
+  }
+
+  // ---------- the engine save ----------
+  /** The engine save's data → { v: 1, progress } (migrated), or null when it is not one. */
+  function docFromSave(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    if (data.v > SAVE_VERSION || !data.progress || typeof data.progress !== 'object') return null;
+    var d = migrate(JSON.parse(JSON.stringify(data)));
+    return d ? { v: SAVE_VERSION, progress: d.progress } : null;
+  }
+  /** The browser build's cloud save text (save.json) → the engine save, or null when corrupt or absent. */
+  function fromBrowserSave(text) {
+    var d = typeof text === 'string' ? loadRaw(text) : null;
+    return d ? { v: SAVE_VERSION, progress: d.progress } : null;
+  }
+  /** Two saves' data (engine format): progress merged; null when neither is one. */
+  function mergeDocs(a, b) {
+    var x = docFromSave(a), y = docFromSave(b);
+    if (!x || !y) return x || y;
+    return { v: SAVE_VERSION, progress: mergeProgress(x.progress, y.progress) };
   }
 
   // ---------- leaderboards (local; host adapter may sync) ----------
@@ -154,7 +186,8 @@
 
   return {
     SAVE_VERSION: SAVE_VERSION,
-    mergeProgress: mergeProgress,
+    mergeProgress: mergeProgress, defaultProgress: defaultProgress,
+    docFromSave: docFromSave, fromBrowserSave: fromBrowserSave, mergeDocs: mergeDocs,
     DEFAULT_SETTINGS: DEFAULT_SETTINGS,
     load: load, save: save, fresh: fresh, migrate: migrate,
     checksum: checksum, loadRaw: loadRaw,

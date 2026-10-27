@@ -1,0 +1,109 @@
+/* Companion Club — the browser build's css/style.css and css/gfx.css rewritten
+   class-based for the engine's UI (`npm run css` converts it into
+   assets/ui-style.json). Element selectors, ids, the html[data-gfx-*]
+   attribute selectors and @media do not convert: every widget names its
+   classes, the graphics categories pick the d-* (Surface detail) classes and
+   native/style.ts sets the shadow and glow tiers, and the breakpoints are
+   layouts picked in native/screens.ts. color-mix() and per-cell CSS
+   variables (--tint) are drawn by native/board.ts. High contrast, larger
+   text and reduced motion are the runtime's. */
+
+:root {
+  --bg: #1a1210;
+  --panel: #2b201d;
+  --soft: #3a2b26;
+  --text: #f3e6d8;
+  --muted: #c5ad9d;
+  --accent: #f6b85f;
+  --line: #654c42;
+  --ink: #28190d;
+}
+
+* { box-sizing: border-box; }
+
+.body { color: var(--text); font-size: 16px; }
+.muted { color: var(--muted); font-size: 16px; }
+.small { color: var(--muted); font-size: 13.6px; }
+.title-name { color: var(--accent); font-size: 64px; font-weight: 700; }
+.tagline { color: var(--muted); font-size: 18.4px; }
+.account { color: var(--muted); font-size: 16px; }
+.game-name { color: var(--accent); font-size: 41.6px; font-weight: 700; }
+.day { color: var(--muted); font-size: 16px; }
+.stats { color: var(--text); font-size: 16px; }
+.stats-b { color: var(--text); font-size: 16px; font-weight: 700; }
+.h2 { color: var(--text); font-size: 24px; font-weight: 700; }
+.message { color: var(--muted); font-size: 16px; }
+.result-title { color: var(--text); font-size: 24px; font-weight: 700; }
+.result-reason { color: var(--muted); font-size: 16px; }
+.score-cell { color: var(--text); font-size: 16px; }
+.score-total { color: var(--accent); font-size: 16px; font-weight: 800; }
+.score-rule { background: var(--line); }
+
+/* ------------------------------------------------------------- panels */
+.title-card {
+  background: #2b201de6; border-radius: 24px;
+  padding: 60px 60px;
+}
+.side {
+  background: var(--panel); border-radius: 18px; padding: 16px;
+}
+.board-wrap {
+  background: linear-gradient(#2b201dd9, #2b201dd9), url("../assets/floor-planks.webp") center / 256px 256px repeat, var(--panel);
+  border-radius: 18px; padding: 16px;
+}
+.result-card {
+  background: var(--panel); border-radius: 18px; padding: 36px;
+}
+.art { border-radius: 12px; }
+.toast {
+  background: var(--panel); border: 1px solid var(--accent); border-radius: 12px;
+  padding: 10px 16px; color: var(--text); font-size: 16px;
+  box-shadow: 0 6px 24px #0009;
+}
+
+/* ------------------------------------------------------------- buttons */
+.btn {
+  min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--soft); color: var(--text); font-size: 16px; padding: 6px 10px;
+  text-align: center;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: 0.45; }
+.btn:focus-visible { outline: 3px solid white; outline-offset: 2px; }
+.btn-play { background: var(--accent); color: var(--ink); font-weight: 800; padding: 10px 28px; }
+.btn-secondary { font-weight: 600; padding: 8px 18px; }
+.btn-gear { padding: 6px 14px; }
+.btn-again { padding: 10px 24px; }
+.friend {
+  min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--soft); color: var(--text); padding: 9px; text-align: left;
+}
+.friend:hover { border-color: var(--accent); }
+.friend:focus-visible { outline: 3px solid white; outline-offset: 2px; }
+.friend.active { border-color: var(--accent); box-shadow: 0 0 0 2px #f6b85f55; }
+.friend-name { color: var(--text); font-size: 16px; font-weight: 700; }
+.friend-sub { color: var(--muted); font-size: 13.6px; }
+
+/* ------------------------------------------------------------- Surface detail: Detailed */
+.d-side {
+  background: linear-gradient(#ffffff0b, #fff0 38%), var(--panel);
+  border: 1px solid #ffffff0f;
+}
+.d-title-card {
+  background: linear-gradient(#ffffff0b, #fff0 38%), #2b201de6;
+  border: 1px solid #ffffff0f;
+}
+.d-result-card {
+  background: linear-gradient(#ffffff0b, #fff0 38%), var(--panel);
+  border: 1px solid #ffffff0f;
+}
+.d-btn {
+  background: linear-gradient(#47362f, #362822);
+  box-shadow: inset 0 1px 0 #ffffff14, inset 0 -2px 0 #0003;
+}
+.d-btn:active { translate: 0 1px; }
+.d-btn-play {
+  background: linear-gradient(#ffd08a, #f0a646); color: var(--ink);
+  box-shadow: inset 0 1px 0 #fff6, inset 0 -3px 0 #b8702a55;
+}
+.d-art { border: 1px solid #ffffff1a; }

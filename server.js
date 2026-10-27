@@ -1,10 +1,12 @@
-/* Companion Club — authoritative server (Node). */
-import http from 'node:http';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+/* Companion Club — local static server for development (Node): serves the
+ * packaged folder (the engine's web loader index.html and the package files)
+ * on PORT (default 8000). Not part of the package (.starhermitignore). */
+'use strict';
+const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = __dirname;
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8000;
 
 function readIndex() {
@@ -57,4 +59,4 @@ server.listen(PORT, () => {
   console.log('Companion Club server listening on port ' + PORT);
 });
 
-export default server;
+module.exports = server;
