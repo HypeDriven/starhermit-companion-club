@@ -8,7 +8,7 @@
     "assets/ui-style.json": {"sha256": "c88970f9da4a3396e4720c22c155ba477f30c1329860ff7c52704b2c9023dd71", "size": 7462},
     "cover.jpg": {"sha256": "bb834215383a44672d11545d220bdf38c0035678b487f8f72ed13d6958c6a905", "size": 226304},
     "icon.png": {"sha256": "de7a8898a751ab452618627361ef6ef4130137ae36e5c741f53a9f793231b420", "size": 8639},
-    "index.html": {"sha256": "129b71b4f86691fdbe5cc57d46bdc9f417b8af201b81b99f10a65264f158e844", "size": 1784},
+    "index.html": {"sha256": "32adf69e03554df8fa3f72cdec4a4640f1d9094e979618f1ed34e0fa671a75e2", "size": 1784},
     "js/content.js": {"sha256": "9ae987f96530968aa8118128f5890cd39165ec9ebf189d6d04a887cae0534e57", "size": 22528},
     "js/i18n.js": {"sha256": "1504842c08ceea44f19c121460c225de7a138cc7b7b7a45ff30758cdb48b5b54", "size": 1682},
     "js/platform-strings.js": {"sha256": "629f95d17ced73ee17863b20bbbc0cd0a5f4d502ba3278f2b8c15423eb47e602", "size": 7208},
@@ -50,7 +50,7 @@
     "sfx/undo-rewind.opus": {"sha256": "fa0c0b7529276cf2d8745c425d408b87609f7e1e97feadc1aa2ee2efc7970147", "size": 11633},
     "sfx/win-fanfare.opus": {"sha256": "f2c7276448eb6ba9b276fc1daa7333b3338585e9b545dd011c09c76c9f1ea149", "size": 39129},
     "sfx/wish-new-plink.opus": {"sha256": "75668b7d5f745eae4e936303493ace82a5c2d285941857a313bd3d2c93d8ac4b", "size": 11791},
-    "starhermit.txt": {"sha256": "5de098ae053df758ef8e7cba383a300111895414f32882544f7cdfb866a00ee4", "size": 1713}
+    "starhermit.txt": {"sha256": "376f722d69ec946a437a3e681f0d7ea4eb38d0487661404912efe10165c0f1be", "size": 1713}
   },
   "excluded": ["coverart.png", "node_modules/", "package-lock.json", "package.json", "server.js", "sfx/manifest.md", "sfx/manifest.txt", "spec.md", "tests/", "tools/", "tsconfig.json"],
   "format": 1
