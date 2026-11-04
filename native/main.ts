@@ -16,7 +16,7 @@
 // so a hidden window and slow frames never count and play scripts replay
 // exactly.
 import "./classic.ts";
-import { clipboard, frame, onFixedUpdate, onQuit, onRender, onResume, onStart, onSuspend, onUpdate, setFixedRate } from "starhermit:engine";
+import { clipboard, frame, levelSettings, onFixedUpdate, onQuit, onRender, onResume, onStart, onSuspend, onUpdate, setFixedRate } from "starhermit:engine";
 import { onAction } from "starhermit:input";
 import * as ui from "starhermit:ui";
 import { requestSignIn } from "starhermit:platform";
@@ -38,7 +38,7 @@ export const app = {
   /** Widget to focus once the screen is built. */
   focusNext: null as string | null,
   toast: null as { text: () => string; until: number } | null,
-  look: lookFor("balanced", 2) as Look,
+  look: lookFor(levelSettings("molecular")) as Look,
 };
 export let state: State | null = null;
 export let selected: string | null = null;
@@ -273,10 +273,10 @@ onAction((e) => {
 let lookKey = "";
 function applyLook(): void {
   const f = frame();
-  const key = `${f.quality}:${f.levelIndex}`;
+  const key = f.level;
   if (key === lookKey) return;
   lookKey = key;
-  app.look = lookFor(f.quality, f.levelIndex);
+  app.look = lookFor(levelSettings(f.level));
   styleLook(app.look);
   fx.setLook(app.look);
 }

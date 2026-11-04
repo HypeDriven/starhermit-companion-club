@@ -1,0 +1,30 @@
+# Graphics-tier bench (tools/engine-tier-bench.mjs): the first club day (a fixed
+# day; the hint-driven moves club-day.play makes), settled, then the moves up to
+# the third serve measured with their sparkles, the motes drifting.
+until 300 =Play
+frames 10
+click =Play
+until 60 Clubhouse floor
+frames 120
+measure start
+key KeyH 1
+frames 30
+key ArrowDown 1
+frames 30
+key KeyH 1
+frames 30
+key KeyS 1
+frames 60
+key KeyH 1
+frames 30
+key ArrowDown 1
+frames 30
+key KeyH 1
+frames 30
+key KeyS 1
+frames 60
+key KeyH 1
+frames 30
+key KeyT 1
+frames 300
+measure stop

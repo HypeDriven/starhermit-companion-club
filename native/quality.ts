@@ -1,14 +1,17 @@
 // The look per graphics level: the browser build's four presets (js/gfx.js
 // TABLE: the shadow, glow, colour-grade, particle, ambient-motion and
 // surface-detail tiers of its effects layer) keyed by the runtime's quality
-// tier (frame().quality), with the dust motes and sparkle bursts scaled
-// within the tier by the level (frame().levelIndex) as the browser build
-// scaled its budgets by the hardware level (js/gfx.js BUDGETS, MOTE_CAP,
+// tier (frame().quality). This is a 2D game drawn with starhermit:draw: its
+// drop shadows, glow and grade are its own art, not the engine renderer's,
+// so they stay keyed by the tier. The dust motes and sparkle bursts scale
+// with the level's particle budget (levelSettings().particles) against the
+// tier's anchor level (quantum, molecular, terrestrial, galactic), at most
+// four times the tier's own and within the browser build's caps (MOTE_CAP,
 // BURST_CAP). The runtime owns the rest of the old Graphics panel: Auto and
 // the level choice, render scale and the pixel-ratio cap, adaptive
 // resolution, the frame-rate limit and readout. The per-category overrides
 // of the old panel are not offered (the runtime's Options choose a level).
-import type { QualityTier } from "starhermit:engine";
+import { levelSettings, type GraphicsLevel, type LevelSettings, type QualityTier } from "starhermit:engine";
 
 export type Preset = QualityTier;
 export interface Look {
@@ -45,16 +48,17 @@ const BUDGETS: Record<Preset, { motes: number; burst: number }> = {
 };
 const MOTE_CAP = { off: 0, low: 40, high: 240 };
 const BURST_CAP = { off: 0, low: 0.5, high: 4 };
-/** The first level index of each tier. */
-const TIER_FLOOR: Record<Preset, number> = { low: 0, balanced: 2, high: 4, ultra: 7 };
+/** Each tier's anchor level: its budgets are tuned for it. */
+const ANCHOR: Record<Preset, GraphicsLevel> = { low: "quantum", balanced: "molecular", high: "terrestrial", ultra: "galactic" };
 
-/** The look for a quality tier at a level index (0 … 9). */
-export function lookFor(preset: Preset, levelIndex: number): Look {
+/** The look for a graphics level (default: this frame's). */
+export function lookFor(s: LevelSettings = levelSettings()): Look {
+  const preset = s.quality;
   const row = TABLE[preset] ?? TABLE.balanced;
   const b = BUDGETS[preset] ?? BUDGETS.balanced;
-  // Levels are about 1.64× apart in GPU throughput: budgets grow with the
-  // level above the tier's first, at most four times the tier's own.
-  const k = Math.min(4, Math.pow(1.64, Math.max(0, levelIndex - (TIER_FLOOR[preset] ?? 0))));
+  // The level's particle budget doubles a level: budgets grow with it above
+  // the tier's anchor, at most four times the tier's own.
+  const k = Math.min(4, Math.max(1, s.particles / levelSettings(ANCHOR[preset] ?? "molecular").particles));
   return {
     preset, ...row,
     motes: Math.min(MOTE_CAP[row.particles], Math.round(b.motes * k)),

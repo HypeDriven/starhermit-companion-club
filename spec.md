@@ -19,7 +19,7 @@
 | `native/board.ts` | The board cells (`ui.widget`), their drawing per graphics level, the emoji icon atlas. |
 | `native/fx.ts` | Effects layer: hearth lamp, dust motes, serve / tidy / win bursts. |
 | `native/style.ts` | Registers `assets/ui-style.json`, folds the graphics categories into the styles. |
-| `native/quality.ts` | Graphics level (`frame().quality`, `levelIndex`) → the old presets' categories and budgets. |
+| `native/quality.ts` | Graphics level (`frame().quality`, `levelSettings().particles`) → the old presets' categories and budgets. |
 | `native/audio.ts` | Authored clips from `sfx/manifest.json`, room-tone loop, the rendered pad. |
 | `native/platform.ts` | Save (`starhermit:storage` saves, foreign-save migration, conflict merge), legacy settings removal, player, invite link, leaderboard post through `score-script.js`. |
 | `native/i18n.ts`, `native/classic.ts` | Locale from the runtime's interface language; loads `js/*.js` as classic scripts with typed exports. |
@@ -164,7 +164,7 @@ Must never be cut off: the header counters, all three action buttons, the pad, t
 
 **Motion:** state changes are instant redraws. Ambient motion adds a 2.6 s idle bob on friend tokens, a 2.4 s pulse inside the selected cell, a 28 s drift on the title art and the lamp flicker; Particles add the serve / tidy / win bursts. The runtime's reduced-motion setting stills all of it (motes hold still, no bursts).
 
-**Graphics.** The runtime's Options › Graphics choose the level; `native/quality.ts` maps its tier (`frame().quality`) to the browser build's presets, and the level within the tier (`frame().levelIndex`, about 1.64× apart) scales the particle budgets up to 4×, as the old hardware level did. Categories:
+**Graphics.** The runtime's Options › Graphics choose the level; `native/quality.ts` maps its tier (`frame().quality`) to the browser build's presets, and the level's particle budget (`levelSettings().particles`, doubling a level) over the tier's anchor level (quantum, molecular, terrestrial, galactic) scales the particle budgets up to 4×, as the old hardware level did. Categories:
 - **Shadows** (off/low/medium/high): drop shadows under the panels and cards, the board cells and the icons.
 - **Glow** (off/on): warm backdrop light, glowing selection rings on cells and Friends cards, a red glow on messy stations, an additive halo behind clean station icons, glowing title, header numbers, Play and Total.
 - **Colour grade** (off/on): vignette and warm/cool wash over the title art (the old saturation/sepia filter on the art is not available).
