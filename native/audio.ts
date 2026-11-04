@@ -15,30 +15,18 @@
 // rendered once into clips (createClip); the synthesized stand-ins it played
 // while a sample loaded (and its noise bed under the room tone) are not
 // ported (the engine's web runtime drops clip loads while a synthesis graph
-// changes). Clips load once the mixer runs (natively at once, in a browser
-// after the first press), one at a time.
+// changes). Every clip loads at once in onStart (each reaches the mixer
+// when it is ready); the room tone and the pad start once the mixer runs.
 import { files } from "starhermit:engine";
 import { context, createClip, loadClip, play as playClip, type AudioClip, type Bus, type Sound } from "starhermit:audio";
 
 const LEVEL = { music: 0.6, effects: 0.9, ambience: 0.5 };
 /** Rules events whose names differ from the authored sound events. */
 const ALIAS: Record<string, string> = { move: "step", "wish-expired": "miss" };
-// The first sounds of a club day load first.
-const FIRST = ["ui", "select", "step", "serve", "tidy", "messy", "wish-new", "invalid", "hint"];
 
 const eventFile = new Map<string, string>();
 const clips = new Map<string, AudioClip>();
-const queue: string[] = [];
-let loading = false;
-let wantClips = false;
-function load(name: string): void { if (!queue.includes(name) && !clips.has(name)) queue.push(name); }
-function pump(): void {
-  if (loading || !queue.length) return;
-  const name = queue.shift()!;
-  loading = true;
-  loadClip(`sfx/${name}.opus`).then((c) => { clips.set(name, c); loading = false; }, (e: unknown) => { console.warn(`sfx ${name}: ${String(e)}`); loading = false; });
-}
-/** Reads the manifest and asks for the clips; they load once the mixer runs (see update). */
+/** Reads the manifest and loads every clip at once (onStart); a cue whose clip is still loading is silent. */
 export function loadSfx(): void {
   try {
     const list = files.readJson("sfx/manifest.json") as unknown as { name?: string; event?: string }[];
@@ -46,7 +34,9 @@ export function loadSfx(): void {
       if (e && typeof e.name === "string" && typeof e.event === "string" && !eventFile.has(e.event)) eventFile.set(e.event, e.name);
     }
   } catch (e) { console.warn(`sfx manifest: ${String(e)}`); }
-  wantClips = true;
+  for (const name of new Set(eventFile.values())) {
+    loadClip(`sfx/${name}.opus`).then((c) => { clips.set(name, c); }, (e: unknown) => console.warn(`sfx ${name}: ${String(e)}`));
+  }
 }
 
 let started = false;
@@ -63,7 +53,7 @@ export function play(event: string): void {
   if (!clip) return;
   const bus: Bus = name === "ui" ? "interface" : "effects";
   try { playClip(clip, { bus, gain: LEVEL.effects }); }
-  catch { clips.delete(file!); load(file!); } // a clip the mixer lost: load it again
+  catch { /* the mixer is full this frame: skip it */ }
 }
 
 // -- the pad ----------------------------------------------------------------------------------
@@ -93,23 +83,14 @@ let roomStarted = false;
 let nextChord = 0;
 let step = 0;
 
-/** Each frame: the samples once the mixer runs (one at a time), one rendered chord a frame,
- * then (once Play was pressed) the room tone loop and the pad's chords by mixer time. */
+/** Each frame: one rendered chord a frame, then (once the mixer runs and
+ * Play was pressed) the room tone loop and the pad's chords by mixer time. */
 export function update(): void {
-  if (context.state !== "running") return;
-  if (wantClips) {
-    wantClips = false;
-    const firstFiles = FIRST.map((e) => eventFile.get(e)).filter((f): f is string => !!f);
-    for (const name of firstFiles) load(name);
-    for (const name of eventFile.values()) load(name);
-  }
-  pump();
-  if (loading || queue.length) return;
   if (chords.length < CHORDS.length) {
     try { chords.push(chordClip(CHORDS[chords.length]!)); } catch (e) { console.warn(`audio: ${String(e)}`); }
     return;
   }
-  if (!started) return;
+  if (context.state !== "running" || !started) return;
   const roomFile = eventFile.get("ambience");
   const roomClip = roomFile ? clips.get(roomFile) : undefined;
   if (!roomStarted && roomClip) {

@@ -189,19 +189,11 @@ function accountLine(): string {
   const sync = s === "synced" ? pt("synced") : s === "saving" ? pt("saving") : pt("nosync");
   return pt("playing", { name: platform.displayName() || "…" }) + " · " + sync;
 }
-/** Buttons at their own widths in rows that wrap at `width` (CSS flex-wrap), centred. */
+/** Buttons at their own widths in an engine row that wraps at `width` (CSS flex-wrap), centred. */
 function flow(label: string, list: Btn[], width: number, gap = 10): void {
-  const rows: Btn[][] = [[]];
-  let used = 0;
-  for (const b of list) {
-    const bw = Math.min(width, textWidth(b.text, b.style ?? ["btn"], "button") + 2);
-    if (rows[rows.length - 1]!.length && used + gap + bw > width) { rows.push([]); used = 0; }
-    used += (rows[rows.length - 1]!.length ? gap : 0) + bw;
-    rows[rows.length - 1]!.push(b);
-  }
-  ui.column(label, () => {
-    rows.forEach((row, ri) => ui.row(`${label}-r${ri}`, () => { for (const b of row) button(b, textWidth(b.text, b.style ?? ["btn"], "button") + 2 > width ? width : null); }, { spacing: gap, align: "center" }));
-  }, { spacing: gap, align: "center" });
+  ui.row(label, () => {
+    for (const b of list) button(b, textWidth(b.text, b.style ?? ["btn"], "button") + 2 > width ? width : null);
+  }, { wrap: true, width, gap, justify: "center", align: "center" });
 }
 
 // ------------------------------------------------------------------ the club day
