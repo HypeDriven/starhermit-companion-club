@@ -25,7 +25,7 @@
 | `native/i18n.ts`, `native/classic.ts` | Locale from the runtime's interface language; loads `js/*.js` as classic scripts with typed exports. |
 | `js/rng.js`, `js/rules.js`, `js/content.js` | `CCRNG`, `CCRules`, `CCContent`: the pure rules engine and content, unchanged from the browser build (also run by the Node tests). |
 | `js/store.js` | `CCStore`: the pure save model — `docFromSave`, `fromBrowserSave` (old `{ sum, payload }` save.json), `mergeProgress` / `mergeDocs`; the old localStorage format kept for tests. |
-| `js/i18n.js`, `js/strings.js`, `js/platform-strings.js` | `CCI18N` (`T`, `setLocale`), the nine-locale tables, and the account / leaderboard lines. |
+| `assets/strings.json` | The nine-locale tables, read by the engine's `strings`; account and leaderboard lines are its `starhermit.*` keys, the sync lines are in the tables. |
 | `assets/ui-style.json` | Styles converted with `npm run css` from `tools/ui-style.css` (the old CSS rewritten class-based). |
 | `assets/icons.png` | The ten companion and station emoji (Noto Color Emoji) pre-rendered in 128 px cells (the engine draws no colour emoji). |
 | `assets/key-art.webp`, `assets/results-art.webp`, `assets/floor-planks.webp` | Title backdrop, results illustration, floor texture. |
@@ -185,7 +185,7 @@ The runtime owns what the old Graphics panel also did: Auto and the level, rende
 
 ## 9. Audio direction
 
-`native/audio.ts` plays the authored clips (`sfx/manifest.json`: one clip per logical event; the rules' `move` and `wish-expired` play `step` and `miss`) on the runtime's buses — effects (gain 0.9), the Play tick on interface — and, from the first Play, the authored 12 s clubhouse room tone as a quiet loop (0.25) and the generative pad (C, Am, F, G an octave down, a chord every 5.2 s, rendered once into clips; music bus, 0.6). Options › Audio owns the volumes, mute and voice limit. Clips load one at a time once the mixer runs (in a browser after the first press). The browser build's synthesized stand-ins (played while a clip loaded) and its noise bed under the room tone are not ported.
+`native/audio.ts` plays the authored clips (`sfx/manifest.json`: one clip per logical event; the rules' `move` and `wish-expired` play `step` and `miss`) on the runtime's buses — effects (gain 0.9), the Play tick on interface — and, from the first Play, the authored 12 s clubhouse room tone as a quiet loop (0.25) and the generative pad (C, Am, F, G an octave down, a chord every 5.2 s, rendered once offline into clips; music bus, 0.6). Options › Audio owns the volumes, mute and voice limit. Clips load one at a time once the mixer runs (in a browser after the first press). The browser build's synthesized stand-ins (played while a clip loaded) and its noise bed under the room tone are not ported.
 
 **SFX event table** (source of `sfx/manifest.txt`; clips are MOSS-SoundEffect v2.0, 48 kHz mono Opus 96 kbps, −20 LUFS):
 
@@ -216,7 +216,7 @@ The runtime owns what the old Graphics panel also did: Auto and the level, rende
 
 ## 10. Localization
 
-Nine locales: **en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT**. English source strings are the keys; `js/strings.js` holds the tables (es-ES and fr-CA list only their differences, e.g. fr-CA *pointage*); `js/platform-strings.js` the account and leaderboard lines. The locale is the runtime's interface language (Options › Language, else the account's preferred language, else the device's), mapped to the nearest shipped locale by `native/i18n.ts`; every string is looked up each frame, so a change shows at once without touching the day. Companion names and "Companion Club" stay untranslated. Long labels wrap (buttons fall back to a wrapped paragraph when their text is wider than the button).
+Nine locales: **en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT**. English source strings are the keys; `assets/strings.json` holds the tables (es-ES and fr-CA list only their differences, e.g. fr-CA *pointage*); `js/platform-strings.js` the account and leaderboard lines. The locale is the runtime's interface language (Options › Language, else the account's preferred language, else the device's), mapped to the nearest shipped locale by `native/i18n.ts`; every string is looked up each frame, so a change shows at once without touching the day. Companion names and "Companion Club" stay untranslated. Long labels wrap (buttons fall back to a wrapped paragraph when their text is wider than the button).
 
 ## 11. Accessibility
 
@@ -236,7 +236,7 @@ Nine locales: **en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT**
 
 ## 13. Technical architecture
 
-- `native/classic.ts` loads `js/rng.js`, `rules.js`, `content.js`, `store.js`, `strings.js`, `i18n.js`, `platform-strings.js` with `loadClassic`, so the shipped rules are the code the Node tests run. `native/main.ts` keeps the UI state (`state`, `selected`, `message`, the leaderboard line); `native/screens.ts` rebuilds the UI from it each frame.
+- `native/classic.ts` loads `js/rng.js`, `rules.js`, `content.js`, `store.js` with `loadClassic`, so the shipped rules are the code the Node tests run. `native/main.ts` keeps the UI state (`state`, `selected`, `message`, the leaderboard line); `native/screens.ts` rebuilds the UI from it each frame.
 - **Time:** a clock advanced by the runtime's fixed steps (60 a second) gives each command its `atMs` (quantized by the rules) and the day's play time, so play scripts replay exactly and a hidden window never counts.
 - **Determinism:** unchanged rules — same seed and commands ⇒ same `hashState`.
 - **Package:** about 1.1 MB (52 files), mostly the Opus clips and art.
@@ -246,7 +246,7 @@ Nine locales: **en-US, en-GB, es-419, es-ES, de-DE, fr-FR, fr-CA, pt-BR, it-IT**
 `npm test` runs:
 - `tests/rules.test.mjs` — rules, content, RNG and the old store format (unchanged);
 - `tests/save.test.mjs` — browser save → engine save, corrupt / newer saves ignored, defaults, the conflict merge;
-- `tests/i18n.test.mjs` — every key the native client and content show exists in all nine locales with intact placeholders, no unused keys, the account lines in every locale, live locale switching;
+- `tests/i18n.test.mjs` — every key the native client and content show exists in all nine locales with intact placeholders, no unused keys;
 - `tests/native.mjs` — the web index matches the files, `tsc` (no `skipLibCheck`), `starhermit check .` with no warnings, and each `tests/native/*.play` as a signed-out `--render-check`: `club-day.play` (generated by `npm run plays` from the rules: the first day won by the hint in 7 turns, 945 points, then Play again) and `screens.play` (Settings opens Options, friends chosen by card, cell and F, the pad, Serve / Tidy / Hint refusals).
 
 `npm run test:browser` (`tools/browser-play.mjs`) serves the packaged folder on loopback and plays it in Chrome on the machine's GPU (headless SwiftShader with `GPU_ADAPTER=software`) at 1366×768, a 390×844 phone (twice: the full day, and pad taps), and 844×390 landscape, failing on console errors or warnings or the runtime's error screen.

@@ -1,11 +1,11 @@
 // The browser build's pure game scripts, shared with the Node tests: the
 // seeded random streams, the rules engine, the content (companions,
-// activities, the Journey, achievements), the save model and the string
-// tables (js/*.js, UMD), evaluated as classic scripts so their globals are
+// activities, the Journey, achievements) and the save model (js/*.js, UMD),
+// evaluated as classic scripts so their globals are
 // this module's exports.
 import { loadClassic } from "starhermit:script";
 
-for (const f of ["js/rng.js", "js/rules.js", "js/content.js", "js/store.js", "js/strings.js", "js/i18n.js", "js/platform-strings.js"]) loadClassic(f);
+for (const f of ["js/rng.js", "js/rules.js", "js/content.js", "js/store.js"]) loadClassic(f);
 
 // -- The shapes this client reads -------------------------------------------------
 export type Dir = "up" | "down" | "left" | "right";
@@ -55,22 +55,9 @@ interface StoreApi {
   mergeProgress(a: Progress, b: Progress): Progress;
   defaultProgress(): Progress;
 }
-interface I18nApi {
-  T(key: string, vars?: Record<string, string | number> | null): string;
-  setLocale(tag: string): string;
-  readonly lang: string;
-  locales: string[];
-}
-interface PlatformStringsApi {
-  platformStrings(lang: string): Record<string, string>;
-  fmtPlatform(s: string, vars?: Record<string, string | number>): string;
-}
-
 const g = globalThis as unknown as {
-  CCRules: RulesApi; CCContent: ContentApi; CCStore: StoreApi; CCI18N: I18nApi; CCPlatformStrings: PlatformStringsApi;
+  CCRules: RulesApi; CCContent: ContentApi; CCStore: StoreApi;
 };
 export const Rules = g.CCRules;
 export const Content = g.CCContent;
 export const Store = g.CCStore;
-export const I18n = g.CCI18N;
-export const PlatformStrings = g.CCPlatformStrings;

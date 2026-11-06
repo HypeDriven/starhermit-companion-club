@@ -24,7 +24,7 @@ import { Content as C, Rules as R, type Command, type Dir, type GameEvent, type 
 import * as audio from "./audio.ts";
 import * as board from "./board.ts";
 import * as fx from "./fx.ts";
-import { tr, N, pt } from "./i18n.ts";
+import { tr, N } from "./i18n.ts";
 import * as platform from "./platform.ts";
 import { lookFor, type Look } from "./quality.ts";
 import { drawScreens } from "./screens.ts";
@@ -37,7 +37,6 @@ export const app = {
   openedFrame: 0,
   /** Widget to focus once the screen is built. */
   focusNext: null as string | null,
-  toast: null as { text: () => string; until: number } | null,
   look: lookFor(levelSettings("molecular")) as Look,
 };
 export let state: State | null = null;
@@ -53,9 +52,11 @@ let startedAt = 0;
 
 // ------------------------------------------------------------------ helpers
 export function announce(text: string): void { if (text) ui.announce(text.slice(0, 500), { politeness: "polite" }); }
-export function toast(text: () => string): void {
-  app.toast = { text, until: frame().time + 4 };
-  announce(text());
+/** A toast (4 s), one at a time, 16 px above the bottom (the stack's own margin). */
+let shownToast: ui.Toast | null = null;
+export function toast(text: string): void {
+  shownToast?.dismiss();
+  shownToast = ui.toast!(text, { duration: 4, style: ["toast", "body"], dismissible: false, position: "bottom", offset: 0 });
 }
 export function companion(id: string | null): State["companions"][number] | undefined {
   return state?.companions.find((c) => c.id === id);
@@ -199,11 +200,11 @@ function recordRound(): void {
 // show the player's rank on the results card (lbLine; null = hidden).
 function postToLeaderboard(total: number): void {
   if (!platform.signedIn()) { lbLine = null; return; }
-  const posting = (): string => pt("lbPosting");
+  const posting = (): string => tr("starhermit.leaderboardPosting");
   lbLine = posting;
   void platform.postLeaderboard(total).then((r) => {
     if (lbLine !== posting) return;
-    lbLine = () => (!r.posted ? pt("lbFailed") : r.rank ? pt("lbRank", { rank: r.rank }) : pt("lbPosted"));
+    lbLine = () => (!r.posted ? tr("starhermit.leaderboardNotPosted") : r.rank ? tr("starhermit.leaderboardRank", { rank: r.rank }) : tr("starhermit.leaderboardPosted"));
   });
 }
 
@@ -247,7 +248,7 @@ export function copyInvite(): void {
   if (!link) return;
   let ok = false;
   try { clipboard.writeText(link); ok = true; } catch { ok = false; }
-  toast(() => (ok ? pt("copied") : pt("copyFail", { link })));
+  toast(ok ? tr("starhermit.inviteCopied") : tr("starhermit.inviteLink", { link }));
 }
 export function signIn(): void { void requestSignIn().catch(() => undefined); }
 
@@ -298,6 +299,5 @@ onFixedUpdate(() => { if (!suspended) simMs += 1000 / 60; });
 onUpdate(() => {
   applyLook();
   audio.update();
-  if (app.toast && app.toast.until < frame().time) app.toast = null;
 });
 onRender(() => { drawScreens(); });

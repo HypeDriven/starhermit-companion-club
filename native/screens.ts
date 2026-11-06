@@ -4,7 +4,7 @@
 // Settings), the club day (the header with the day's numbers, the Friends
 // panel with the message line, the direction pad and Serve / Tidy / Hint,
 // the clubhouse floor panel with the board), the results card with its art,
-// the score breakdown and the leaderboard line, the toast, and the effects
+// the score breakdown and the leaderboard line, and the effects
 // layer over everything. The CSS breakpoints are layouts picked by the
 // window's logical size: wide (two columns), phone (≤ 760 px wide: the
 // floor on top, the Friends panel under it, friends in two columns) and
@@ -18,7 +18,7 @@ import { createImageBitmap, type ImageBitmap } from "starhermit:canvas";
 import { Content as C } from "./classic.ts";
 import * as board from "./board.ts";
 import * as fx from "./fx.ts";
-import { tr, pt } from "./i18n.ts";
+import { tr } from "./i18n.ts";
 import * as platform from "./platform.ts";
 import {
   SCORE_PARTS, WHY, activityName, app, choose, companionName, copyInvite, hint, lbLine, message, move, playLive, selected,
@@ -29,13 +29,11 @@ import { COLORS } from "./style.ts";
 // ------------------------------------------------------------------ layout
 interface Layout { lw: number; lh: number; sc: number; ox: number; oy: number; phone: boolean; shortLand: boolean; narrow: boolean }
 function layoutNow(): Layout {
-  const f = frame();
-  const sc = ui.preferences().scale;
-  const sa = f.safeArea;
-  const lw = Math.max(1, (f.width - sa.left - sa.right) / sc), lh = Math.max(1, (f.height - sa.top - sa.bottom) / sc);
+  const v = ui.viewport!();
+  const sc = v.scale, lw = Math.max(1, v.width), lh = Math.max(1, v.height);
   const shortLand = lw > lh && lh <= 500;
   const phone = !shortLand && lw <= 760;
-  return { lw, lh, sc, ox: sa.left / sc, oy: sa.top / sc, phone, shortLand, narrow: lw <= 700 };
+  return { lw, lh, sc, ox: v.x, oy: v.y, phone, shortLand, narrow: lw <= 700 };
 }
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
 /** Heights of blocks as last laid out (logical pixels), for the layouts that fit the board into what is left. */
@@ -119,7 +117,6 @@ export function drawScreens(): void {
     else if (state) gameScreen(L);
   }, { width: L.lw, height: L.lh });
   if (app.screen === "game" && state?.terminal) results(L);
-  toasts();
   fx.layer();
   if (app.focusNext) {
     const age = f.frame - app.openedFrame;
@@ -171,8 +168,8 @@ function titleScreen(L: Layout): void {
       ui.widget("", { role: "none", size: { width: 1, height: 8 } });
       para(accountLine(), inner, ["account", { text: { align: "center" } }], "account");
       const plat: Btn[] = [];
-      if (!platform.signedIn()) plat.push({ id: "btn-signin", text: pt("signIn"), style: ["btn", "btn-secondary"], act: signIn });
-      else if (platform.inviteLink()) plat.push({ id: "btn-invite", text: pt("invite"), style: ["btn", "btn-secondary"], act: copyInvite });
+      if (!platform.signedIn()) plat.push({ id: "btn-signin", text: tr("starhermit.signIn"), style: ["btn", "btn-secondary"], act: signIn });
+      else if (platform.inviteLink()) plat.push({ id: "btn-invite", text: tr("starhermit.invite"), style: ["btn", "btn-secondary"], act: copyInvite });
       if (plat.length) { ui.widget("", { role: "none", size: { width: 1, height: 4 } }); flow("plat", plat, inner); }
       ui.widget("", { role: "none", size: { width: 1, height: 12 } });
       flow("title-actions", [
@@ -184,10 +181,10 @@ function titleScreen(L: Layout): void {
   }, { align: "center", width: L.lw });
 }
 function accountLine(): string {
-  if (!platform.signedIn()) return pt("offline");
+  if (!platform.signedIn()) return tr("Offline — progress is stored on this device.");
   const s = platform.syncState();
-  const sync = s === "synced" ? pt("synced") : s === "saving" ? pt("saving") : pt("nosync");
-  return pt("playing", { name: platform.displayName() || "…" }) + " · " + sync;
+  const sync = s === "synced" ? tr("progress synced") : s === "saving" ? tr("saving…") : tr("cloud sync unavailable");
+  return tr("Playing as {name}", { name: platform.displayName() || "…" }) + " · " + sync;
 }
 /** Buttons at their own widths in an engine row that wraps at `width` (CSS flex-wrap), centred. */
 function flow(label: string, list: Btn[], width: number, gap = 10): void {
@@ -405,16 +402,5 @@ function results(L: Layout): void {
     };
     if (H("result-card", 0) > availH) ui.scrollArea("result-scroll", { width: w + 10, height: availH }, body, frame().frame - app.openedFrame < 3 ? { scrollTo: { top: 0 } } : undefined);
     else body();
-  });
-}
-
-// ------------------------------------------------------------------ toast
-function toasts(): void {
-  const tt = app.toast;
-  if (!tt) return;
-  const L = layoutNow();
-  const w = Math.min(560, L.lw - 32);
-  ui.place("toast", { anchor: "bottom", y: 16 }, () => {
-    ui.style("toast", { width: w }).column("toast-box", () => { para(tt.text(), w - 34, ["body"], "toast-text"); });
   });
 }
