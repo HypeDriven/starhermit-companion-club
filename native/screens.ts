@@ -1,3 +1,5 @@
+import { localizedStyle as __l10nStyle } from "./l10n/font.ts";
+import { openLocalizedOptions as openMenu } from "./l10n/menu.ts";
 // The browser build's DOM screens (js/main.js title/render/resultHtml with
 // css/style.css and css/gfx.css) as starhermit:ui, built every frame: the
 // title card over the key art (account line, Sign in and Invite, Play and
@@ -11,7 +13,7 @@
 // short landscape (≤ 500 px tall: compact two columns). Settings opens the
 // runtime's Options (graphics, sound, language, controls, accessibility),
 // which replaced the old Settings panel.
-import { frame, openMenu } from "starhermit:engine";
+import { frame } from "starhermit:engine";
 import * as draw from "starhermit:draw";
 import * as ui from "starhermit:ui";
 import { createImageBitmap, type ImageBitmap } from "starhermit:canvas";
@@ -46,7 +48,7 @@ function textWidth(text: string, style: readonly (string | ui.Style)[], kind?: "
 }
 /** Text up to `width` wide: one label when it fits, else a paragraph. */
 function para(text: string, width: number, style: (string | ui.Style)[], id?: string): ui.Rect {
-  let u = ui.style(...style);
+  let u = ui.style(...__l10nStyle(style));
   if (id) u = u.id(id);
   if (textWidth(text, style) <= width) return u.label(text);
   return u.paragraph(text, width);
@@ -68,7 +70,7 @@ function rich(id: string, template: string, vars: Record<string, string | number
       const lead = p.text.startsWith(" ") ? space : 0, trail = p.text.endsWith(" ") ? space : 0;
       const t = p.text.trim();
       if (!t) { ui.widget("", { role: "none", size: { width: space, height: 1 } }); return; }
-      ui.id(`${id}-${i}`).style(p.b ? bold : base, { margin: { start: lead, end: trail } }).label(t);
+      ui.id(`${id}-${i}`).style(__l10nStyle(p.b ? bold : base), __l10nStyle({ margin: { start: lead, end: trail } })).label(t);
     });
   }, { spacing: 0, align: "center" });
 }
@@ -82,9 +84,9 @@ function button(b: Btn, width: number | null = null): void {
   if (b.content) opts.content = b.content;
   else if (width != null && textWidth(b.text, style, "button") + 2 > width) {
     const inner = Math.max(20, width - 22);
-    opts.content = () => { ui.style({ text: { align: "center" } }).paragraph(b.text, inner); };
+    opts.content = () => { ui.style(__l10nStyle({ text: { align: "center" } })).paragraph(b.text, inner); };
   }
-  if (ui.style(...style, width != null ? { width } : {}).id(b.id).button(b.text, opts)) b.act();
+  if (ui.style(...__l10nStyle(style), __l10nStyle(width != null ? { width } : {})).id(b.id).button(b.text, opts)) b.act();
 }
 
 // ------------------------------------------------------------------ art
@@ -161,10 +163,10 @@ function titleScreen(L: Layout): void {
   const top = Math.max(20, (L.lh - H("title-card", 420)) / 2);
   ui.column("title-page", () => {
     ui.widget("", { role: "none", size: { width: 1, height: top } });
-    const r = ui.style("title-card", { width: cardW, padding: pad }).column("title", () => {
-      ui.style("title-name", { text: { size: titleSize, align: "center" } }).paragraph("Companion Club", inner);
+    const r = ui.style(__l10nStyle("title-card"), __l10nStyle({ width: cardW, padding: pad })).column("title", () => {
+      ui.style(__l10nStyle("title-name"), __l10nStyle({ text: { size: titleSize, align: "center" } })).paragraph("Companion Club", inner);
       ui.widget("", { role: "none", size: { width: 1, height: 4 } });
-      ui.style("tagline", { text: { align: "center" } }).paragraph(tr("Guide clubhouse friends, serve their wishes, and keep every station tidy."), inner);
+      ui.style(__l10nStyle("tagline"), __l10nStyle({ text: { align: "center" } })).paragraph(tr("Guide clubhouse friends, serve their wishes, and keep every station tidy."), inner);
       ui.widget("", { role: "none", size: { width: 1, height: 8 } });
       para(accountLine(), inner, ["account", { text: { align: "center" } }], "account");
       const plat: Btn[] = [];
@@ -220,8 +222,8 @@ function header(L: Layout, W: number): void {
   const stats = (): void => rich("stats", tr("Served {served} · Turns {turns} · Score {score}"), { served: `${s.fulfilled}/${s.cfg.goal}`, turns: s.tick, score: s.score.total }, "stats", "stats-b");
   const brand = (): void => {
     ui.column("brand", () => {
-      ui.style("game-name", { text: { size: nameSize } }).label("Companion Club");
-      ui.style("day").label(tr("Clubhouse Day {n}", { n: 1 }));
+      ui.style(__l10nStyle("game-name"), __l10nStyle({ text: { size: nameSize } })).label("Companion Club");
+      ui.style(__l10nStyle("day")).label(tr("Clubhouse Day {n}", { n: 1 }));
     }, { spacing: 0 });
   };
   const gear = (iconOnly: boolean): void => {
@@ -262,16 +264,16 @@ function wideBody(L: Layout, W: number, bodyH: number): void {
   const boardW = W - gap - sideW;
   const pad = L.shortLand ? 8 : 16;
   ui.row("layout", () => {
-    ui.style("side", { width: sideW, height: bodyH, padding: pad }).column("side", () => {
+    ui.style(__l10nStyle("side"), __l10nStyle({ width: sideW, height: bodyH, padding: pad })).column("side", () => {
       const innerW = sideW - pad * 2;
       const innerH = bodyH - pad * 2;
       const content = (): void => friendsPanel(L, innerW, false);
       if (H("side-content", 0) > innerH + 1) ui.scrollArea("side-scroll", { width: innerW, height: innerH }, () => { track("side-content", ui.column("side-content", content)); });
       else track("side-content", ui.column("side-content", content));
     });
-    ui.style("board-wrap", { width: boardW, height: bodyH, padding: pad }).column("floor", () => {
+    ui.style(__l10nStyle("board-wrap"), __l10nStyle({ width: boardW, height: bodyH, padding: pad })).column("floor", () => {
       const h2 = L.shortLand ? 16 : 24;
-      const t = ui.style("h2", { text: { size: h2 } }).label(tr("Clubhouse floor"));
+      const t = ui.style(__l10nStyle("h2"), __l10nStyle({ text: { size: h2 } })).label(tr("Clubhouse floor"));
       track("floor-h2", t);
       const availW = boardW - pad * 2;
       const availH = bodyH - pad * 2 - H("floor-h2", h2 * 1.3) - (L.shortLand ? 6 : 16);
@@ -290,7 +292,7 @@ function phoneBody(L: Layout, W: number, bodyH: number): void {
   const sideH = H("side-phone", 330);
   const floorH = Math.max(180, bodyH - sideH - 16);
   const pad = 10;
-  ui.style("board-wrap", { width: W, height: floorH, padding: pad }).column("floor", () => {
+  ui.style(__l10nStyle("board-wrap"), __l10nStyle({ width: W, height: floorH, padding: pad })).column("floor", () => {
     const availW = W - pad * 2, availH = floorH - pad * 2;
     const B = board.sizeBoard(availW, availH, L.lw);
     ui.column("board-fit", () => {
@@ -299,7 +301,7 @@ function phoneBody(L: Layout, W: number, bodyH: number): void {
     }, { width: availW, align: "center", spacing: 0 });
   }, { spacing: 0 });
   ui.widget("", { role: "none", size: { width: 1, height: 16 } });
-  const r = ui.style("side", { width: W, padding: 16 }).column("side", () => friendsPanel(L, W - 32, true));
+  const r = ui.style(__l10nStyle("side"), __l10nStyle({ width: W, padding: 16 })).column("side", () => friendsPanel(L, W - 32, true));
   track("side-phone", r);
 }
 
@@ -309,7 +311,7 @@ function friendsPanel(L: Layout, w: number, phone: boolean): void {
   const compact = L.shortLand;
   const live = playLive();
   ui.column("friends-panel", () => {
-    ui.style("h2", compact ? { text: { size: 16 } } : {}).label(tr("Friends"));
+    ui.style(__l10nStyle("h2"), __l10nStyle(compact ? { text: { size: 16 } } : {})).label(tr("Friends"));
     ui.widget("", { role: "none", size: { width: 1, height: compact ? 6 : 12 } });
     const colsN = phone || compact ? Math.max(1, Math.min(s.companions.length, Math.floor((w + 8) / (compact ? 100 : 128)))) : 1;
     const fw = (w - 8 * (colsN - 1)) / colsN;
@@ -322,12 +324,12 @@ function friendsPanel(L: Layout, w: number, phone: boolean): void {
             selected: { border: { color: { start: tint, top: COLORS.accent, end: COLORS.accent, bottom: COLORS.accent } } } }
           : {};
         const padStyle: ui.Style = phone ? { padding: 6 } : compact ? { padding: 5 } : {};
-        if (ui.style("friend", tintBorder, padStyle, { width: fw }).id(`friend-${c.id}`).button(companionName(c.id), {
+        if (ui.style(__l10nStyle("friend"), __l10nStyle(tintBorder), __l10nStyle(padStyle), __l10nStyle({ width: fw })).id(`friend-${c.id}`).button(companionName(c.id), {
           selected: c.id === selected,
           disabled: !live,
           content: () => {
-            ui.style("friend-name").label(companionName(c.id));
-            ui.style("friend-sub", compact ? { text: { size: 12 } } : {}).paragraph(sub, fw - 24);
+            ui.style(__l10nStyle("friend-name")).label(companionName(c.id));
+            ui.style(__l10nStyle("friend-sub"), __l10nStyle(compact ? { text: { size: 12 } } : {})).paragraph(sub, fw - 24);
           },
         })) choose(c.id);
       }
@@ -336,14 +338,14 @@ function friendsPanel(L: Layout, w: number, phone: boolean): void {
     const minH = (compact ? 1.5 : phone ? 2 : 3) * msgSize * 1.25;
     ui.widget("", { role: "none", size: { width: 1, height: compact ? 6 : 14 } });
     ui.column("message-box", () => {
-      ui.style("message", { text: { size: msgSize } }).id("message").paragraph(message(), w);
+      ui.style(__l10nStyle("message"), __l10nStyle({ text: { size: msgSize } })).id("message").paragraph(message(), w);
     }, { width: w, ...(minH ? { height: Math.max(minH, H("message-box", 0) > minH ? H("message-box", 0) : minH) } : {}) });
     ui.widget("", { role: "none", size: { width: 1, height: compact ? 6 : 14 } });
     const padW = (w - 6 * 3) / 4;
     ui.row("pad", () => {
       const dirs: [string, string, "up" | "left" | "down" | "right"][] = [["↑", tr("Move up"), "up"], ["←", tr("Move left"), "left"], ["↓", tr("Move down"), "down"], ["→", tr("Move right"), "right"]];
       for (const [glyph, name, dir] of dirs) {
-        button({ id: `pad-${dir}`, text: name, act: () => move(dir), disabled: !live, content: () => ui.style({ text: { align: "center", size: 17 } }).label(glyph) }, padW);
+        button({ id: `pad-${dir}`, text: name, act: () => move(dir), disabled: !live, content: () => ui.style(__l10nStyle({ text: { align: "center", size: 17 } })).label(glyph) }, padW);
       }
     }, { spacing: 6 });
     ui.widget("", { role: "none", size: { width: 1, height: 9 } });
@@ -367,33 +369,33 @@ function results(L: Layout): void {
   const availH = L.lh - 32;
   ui.dialog("results", "", true, () => {
     const body = (): void => {
-      const r = ui.style("result-card", { width: w, padding: pad }).column("result-card", () => {
+      const r = ui.style(__l10nStyle("result-card"), __l10nStyle({ width: w, padding: pad })).column("result-card", () => {
         if (resultsArt) {
           const artH = Math.min(inner * (540 / 960), L.lh * 0.28);
           const img = resultsArt;
-          ui.style("art").widget("", {
+          ui.style(__l10nStyle("art")).widget("", {
             role: "image", size: { width: inner, height: artH },
             draw: (rr) => { cover(img, rr.x, rr.y, rr.width, rr.height, 0.5, 0.5); },
           });
           ui.widget("", { role: "none", size: { width: 1, height: 12 } });
         }
-        ui.style("result-title", { text: { align: "center" } }).id("result-title").paragraph(t.won ? tr("Club day complete!") : tr("Club day ended"), inner);
+        ui.style(__l10nStyle("result-title"), __l10nStyle({ text: { align: "center" } })).id("result-title").paragraph(t.won ? tr("Club day complete!") : tr("Club day ended"), inner);
         ui.widget("", { role: "none", size: { width: 1, height: 8 } });
-        if (why) ui.style("result-reason", { text: { align: "center" } }).paragraph(tr(why), inner);
+        if (why) ui.style(__l10nStyle("result-reason"), __l10nStyle({ text: { align: "center" } })).paragraph(tr(why), inner);
         ui.widget("", { role: "none", size: { width: 1, height: 12 } });
         const parts = SCORE_PARTS.filter(([, k]) => s.score[k]);
         ui.grid("score", () => {
           for (const [label, k] of parts) {
-            ui.style("score-cell").label(tr(label));
-            ui.style("score-cell").label(String(s.score[k]));
+            ui.style(__l10nStyle("score-cell")).label(tr(label));
+            ui.style(__l10nStyle("score-cell")).label(String(s.score[k]));
           }
           ui.cell({ span: 2 }).widget("", { role: "none", size: { width: 1, height: 1 }, style: "score-rule" });
-          ui.style("score-total").label(tr("Total"));
-          ui.style("score-total").id("score-total").label(String(s.score.total));
+          ui.style(__l10nStyle("score-total")).label(tr("Total"));
+          ui.style(__l10nStyle("score-total")).id("score-total").label(String(s.score.total));
         }, { columns: [{ width: "auto" }, { width: "auto", align: "end" }], gap: { column: 28, row: 6 } });
         if (lbLine) {
           ui.widget("", { role: "none", size: { width: 1, height: 10 } });
-          ui.style("result-reason", { text: { align: "center" } }).id("result-lb").paragraph(lbLine(), inner);
+          ui.style(__l10nStyle("result-reason"), __l10nStyle({ text: { align: "center" } })).id("result-lb").paragraph(lbLine(), inner);
         }
         ui.widget("", { role: "none", size: { width: 1, height: 14 } });
         button({ id: "btn-again", text: tr("Play again"), style: ["btn", "btn-again"], act: start });

@@ -1,3 +1,4 @@
+import { localizedDrawOptions as __l10nDrawOptions } from "./l10n/font.ts";
 // The clubhouse floor as the browser build's DOM board drew it (js/main.js
 // renderBoard, css/style.css .cc-board and css/gfx.css): a square grid of
 // cells, each a ui.widget with the old button's accessible name ("Row 3,
@@ -132,7 +133,7 @@ function cellWidget(s: State, x: number, y: number, size: number, showNames: boo
       // --- content: icon (b) over the name (span)
       const nameSize = Math.max(8, Math.min(12, vw * 0.011)) * k;
       const nameOpts = { size: nameSize, maxWidth: r.width - 8 * k };
-      const nameH = showNames ? Math.min(r.height * 0.42, draw.measureText(label, nameOpts).height + 2 * k) : 0;
+      const nameH = showNames ? Math.min(r.height * 0.42, draw.measureText(label, __l10nDrawOptions(nameOpts)).height + 2 * k) : 0;
       // the icon at clamp(18px, 4vw, 38px), never more than the tile has room for (a token is 1.25 icons across)
       const iconSize = Math.min(Math.max(18, Math.min(38, vw * 0.04)) * k * 1.15, (r.height - nameH - 6 * k) / (detailed && c ? 1.3 : 1.05));
       const cx = r.x + r.width / 2;
@@ -172,21 +173,21 @@ function cellWidget(s: State, x: number, y: number, size: number, showNames: boo
           }
         }
       } else {
-        draw.text("·", cx, iconY + iconSize * 0.15, { size: iconSize * 0.7, color: COLORS.text, align: "center", weight: "bold" });
+        draw.text("·", cx, iconY + iconSize * 0.15, __l10nDrawOptions({ size: iconSize * 0.7, color: COLORS.text, align: "center", weight: "bold" }));
       }
       if (showNames) {
-        draw.text(label, cx, iconY + iconSize + 2 * k, { ...nameOpts, color: COLORS.text, align: "center", clip: { x: r.x, y: r.y, width: r.width, height: r.height } });
+        draw.text(label, cx, iconY + iconSize + 2 * k, __l10nDrawOptions({ ...nameOpts, color: COLORS.text, align: "center", clip: { x: r.x, y: r.y, width: r.width, height: r.height } }));
       }
       // --- the station badge (a friend standing on a station keeps its identity)
       if (st && c) {
         const bs = Math.max(10, Math.min(16, vw * 0.014)) * k;
         const txt = st.messy ? "!" : "";
-        const tw = txt ? draw.measureText(txt, { size: bs, weight: "bold" }).width : 0;
+        const tw = txt ? draw.measureText(txt, __l10nDrawOptions({ size: bs, weight: "bold" })).width : 0;
         const bw = bs + tw + (detailed ? 8 * k : 0), bh = bs * 1.25;
         const bx = r.x + r.width - 4 * k - bw, by = r.y + 2 * k;
         if (detailed) draw.box(bx, by, bw, bh, { background: "#1a1210cc", radius: 8 });
         icon(st.activity, bx + (detailed ? 4 * k : 0), by + (bh - bs) / 2, bs);
-        if (txt) draw.text(txt, bx + (detailed ? 4 * k : 0) + bs, by + (bh - bs) / 2 - bs * 0.1, { size: bs, weight: "bold", color: st.messy ? "#ff9a86" : COLORS.accent });
+        if (txt) draw.text(txt, bx + (detailed ? 4 * k : 0) + bs, by + (bh - bs) / 2 - bs * 0.1, __l10nDrawOptions({ size: bs, weight: "bold", color: st.messy ? "#ff9a86" : COLORS.accent }));
       }
     },
   });

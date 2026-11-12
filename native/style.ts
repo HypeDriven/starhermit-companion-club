@@ -1,3 +1,5 @@
+// localization-runtime:attached
+import { setLocalizedStyles as __l10nStyles } from "./l10n/font.ts";
 // The look of the title, the club day's panels and the results card: the
 // browser build's css/style.css and css/gfx.css, rewritten class-based in
 // tools/ui-style.css and converted once with `starhermit css` into
@@ -91,11 +93,11 @@ export function initStyles(): void {
   });
   ui.setTokens(css.tokens);
   ui.setAnimations(css.animations);
-  if (look) ui.setStyles(styles());
+  if (look) __l10nStyles(styles());
 }
 
 /** The graphics categories on the graphics level (quality.ts). */
 export function applyLook(l: Look): void {
   look = l;
-  if (css) ui.setStyles(styles());
+  if (css) __l10nStyles(styles());
 }

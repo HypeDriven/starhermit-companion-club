@@ -40,3 +40,7 @@ engine.gamepad.serve=West
 engine.gamepad.tidy=North
 engine.gamepad.hint=Select
 engine.gamepad.friend=RightShoulder+LeftShoulder
+
+# Game language (saved per player); Automatic follows the account/device.
+control.localization=F2 | Language
+engine.group.localization=Interface
