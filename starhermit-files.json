@@ -22,7 +22,7 @@
     "assets/ui-style.json": {"sha256": "c88970f9da4a3396e4720c22c155ba477f30c1329860ff7c52704b2c9023dd71", "size": 7462},
     "cover.jpg": {"sha256": "bb834215383a44672d11545d220bdf38c0035678b487f8f72ed13d6958c6a905", "size": 226304},
     "icon.png": {"sha256": "de7a8898a751ab452618627361ef6ef4130137ae36e5c741f53a9f793231b420", "size": 8639},
-    "index.html": {"sha256": "beba380144e895e83fdc69fe96e1f6e8d970641f48d09d6f4fc0b39b47ce4278", "size": 1942},
+    "index.html": {"sha256": "6338b6a4da739f18201759237e14a53e68362dc5b993814fb7a1a7d9bad7547d", "size": 1942},
     "js/content.js": {"sha256": "9ae987f96530968aa8118128f5890cd39165ec9ebf189d6d04a887cae0534e57", "size": 22528},
     "js/rng.js": {"sha256": "9162ba027a8abc323f88d7ae52bce7f762149db8833368cf63665e56b7ad3a0f", "size": 2370},
     "js/rules.js": {"sha256": "4011520f007869305d09d71307dab43a2a42ccaa416d8babec2fe00614c4e02e", "size": 22833},
@@ -39,6 +39,7 @@
     "native/quality.ts": {"sha256": "47e78eab57f66dade5748b7f7a91b4f0eed27568991caa94e4b02301196b1c17", "size": 3569},
     "native/screens.ts": {"sha256": "da2b977f7513e68aa4ae88c2b0dab2f9c40595251c80bd74c9b37178f753583a", "size": 23445},
     "native/style.ts": {"sha256": "f8bec61c4765e8c30f239c82d04a30260a60b67fcc16be0f4326493c0e7b789d", "size": 4638},
+    "publication.json": {"sha256": "4c7d604aeef73b1f36eb4f1f9f4b47c801fd4bf3280ff67122fe79d4864b44d4", "size": 3401},
     "score-script.js": {"sha256": "2dbfcf68f98b1c687e6c9539fc400ce5cb22a6bf598881342b55383d22db8948", "size": 2486},
     "sfx/ambience-clubhouse.opus": {"sha256": "47847fb2857c3b4840812db21c1fef83b37630aabba4200936606d28934ff4f2", "size": 129986},
     "sfx/day-late-block.opus": {"sha256": "3a35d80fb6097fb2ab950974e9f8b76f6f30664f23866feb66d65b234cb7d6ea", "size": 10666},
@@ -63,7 +64,7 @@
     "sfx/undo-rewind.opus": {"sha256": "fa0c0b7529276cf2d8745c425d408b87609f7e1e97feadc1aa2ee2efc7970147", "size": 11633},
     "sfx/win-fanfare.opus": {"sha256": "f2c7276448eb6ba9b276fc1daa7333b3338585e9b545dd011c09c76c9f1ea149", "size": 39129},
     "sfx/wish-new-plink.opus": {"sha256": "75668b7d5f745eae4e936303493ace82a5c2d285941857a313bd3d2c93d8ac4b", "size": 11791},
-    "starhermit.txt": {"sha256": "350c4655c7a46ee18dba0d21ebf02ea10573d0ec4e78097b25abbdb5218502bb", "size": 1861}
+    "starhermit.txt": {"sha256": "171e27d916821974c4cc488536a9e7466de3725b7e5730974d0615ee32b417b3", "size": 1861}
   },
   "excluded": ["coverart.png", "node_modules/", "package-lock.json", "package.json", "server.js", "sfx/manifest.md", "sfx/manifest.txt", "spec.md", "tests/", "tools/", "tsconfig.json"],
   "format": 1

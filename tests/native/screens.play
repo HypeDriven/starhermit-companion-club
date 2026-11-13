@@ -5,11 +5,12 @@ until 300 =Play
 frames 10
 expect Offline — progress is stored on this device.
 click =Settings
+key F1 2
 until 120 Accessibility
 frames 20
 key F1 2
 frames 30
-key Escape 2
+click =Close
 frames 30
 until 60 =Play
 frames 10
