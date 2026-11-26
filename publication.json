@@ -12,7 +12,7 @@
     "metadataSource": "starhermit.txt",
     "createdAt": "2026-09-01T07:00:59.488035+00:00",
     "coverArtSource": "manifest",
-    "coverArtUpdatedAt": "2026-11-26T15:58:32.80043+00:00",
+    "coverArtUpdatedAt": "2026-11-26T20:08:38.302922+00:00",
     "submittedByUserId": "2712e04e-461b-4d23-81ae-e40b429128a8",
     "submittedByUsername": "starhermit",
     "hosting": {
@@ -22,9 +22,9 @@
       "pinnedCommitSha": null,
       "deployedCommitSha": null,
       "deployError": null,
-      "deployedAt": "2026-11-26T15:58:32.785673+00:00",
+      "deployedAt": "2026-11-26T20:08:38.291804+00:00",
       "externalLaunchUrl": null,
-      "engineVersion": "1.50.0",
+      "engineVersion": "1.51.0",
       "deployWarning": null
     },
     "description": "Guide clubhouse friends to the stations they need, fulfill their wishes, and keep the club tidy and happy.",
@@ -36,19 +36,19 @@
     "links": [],
     "isDisabled": false
   },
-  "publishedAt": "2026-11-26T15:58:31.915Z",
-  "sourceCommit": "acbad17fefd7eed902e5510d4a403ecc52ebfd84",
-  "bytesReceived": 3191529,
-  "archiveSha256": "44d5bf4f1dbfbcbbf6c0129956199f0744e35ec48c9c67d19719d63de1b0ca2a",
+  "publishedAt": "2026-11-26T20:08:38.404Z",
+  "sourceCommit": "b15e271ab5d4a114164dc8998d833d06861f1484",
+  "bytesReceived": 3191605,
+  "archiveSha256": "9a75f1b09f6aa481c4d8381a20f9605cc1afb888160d7509dee4d8169aa68d4a",
   "indexSha256": "5fdaceaa2449cf7c8c26f2470148c18a08189275ae626155be9f08f9e533179e",
   "result": {
     "clientPublished": true,
     "serverImageLoaded": false,
     "imageDigest": null,
-    "bytesReceived": 3191529,
+    "bytesReceived": 3191605,
     "mode": "replace",
     "filesRemoved": 0,
-    "engineVersion": "1.50.0",
+    "engineVersion": "1.51.0",
     "deployWarning": null
   },
   "liveVerification": {
