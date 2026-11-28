@@ -37,7 +37,6 @@ export function loadSfx(): void {
   for (const name of new Set(eventFile.values())) {
     loadClip(`sfx/${name}.opus`).then((c) => { clips.set(name, c); }, (e: unknown) => console.warn(`sfx ${name}: ${String(e)}`));
   }
-  Promise.all(CHORDS.map(renderChord)).then((c) => { chords = c; }, (e: unknown) => console.warn(`audio: ${String(e)}`));
 }
 
 let started = false;
@@ -87,7 +86,14 @@ let step = 0;
 
 /** Each frame: once the pad is rendered, the mixer runs and Play was pressed,
  * the room tone loop and the pad's chords by mixer time. */
+let __bedsStarted = false;
+function startBeds(): void {
+  if (__bedsStarted) return;
+  __bedsStarted = true;
+  Promise.all(CHORDS.map(renderChord)).then((c) => { chords = c; }, (e: unknown) => console.warn(`audio: ${String(e)}`));
+}
 export function update(): void {
+  startBeds();
   if (!chords.length) return;
   if (context.state !== "running" || !started) return;
   const roomFile = eventFile.get("ambience");
